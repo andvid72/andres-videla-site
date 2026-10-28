@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gong and Salesforce: Revenue Signal Reliability Simulator | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative model of how transcript coverage, CRM hygiene, sync latency and tracker ownership degrade the reliability of a forecast signal.">
+<meta name="author" content="Andres Videla">
+<meta property="og:url" content="https://andres-videla.com/demo/signal-reliability/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<link rel="canonical" href="https://andres-videla.com/demo/signal-reliability/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gong and Salesforce: Revenue Signal Reliability Simulator">
+<meta property="og:description" content="An interactive, illustrative model of how coverage, hygiene, latency and ownership degrade a forecast signal.">
+<meta property="og:image" content="https://andres-videla.com/assets/signal-reliability-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --c1:#2f6fe4; --c2:#7a4fd6; --c3:#d9822b; --c4:#1f9d7a;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+    --c1:#6b9bff; --c2:#a98bf0; --c3:#f0a35a; --c4:#4cd3ab;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  --c1:#6b9bff; --c2:#a98bf0; --c3:#f0a35a; --c4:#4cd3ab;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+.lede{color:var(--muted);max-width:760px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:1fr 1.15fr;gap:16px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+button{font:inherit;cursor:pointer}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chip:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ctl{margin-bottom:16px}
+.ctl label{display:block;font-size:14px;font-weight:600}
+.ctl label output{float:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+.ctl small{display:block;color:var(--muted);font-size:13px;margin-bottom:2px}
+.ctl .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+.score{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.score .big{font-size:56px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.score .of{color:var(--muted)}
+.band{display:inline-block;margin-top:8px;border-radius:6px;padding:4px 10px;font-weight:600;font-size:14px}
+.band.ok{background:var(--ok-soft);color:var(--ok)} .band.warn{background:var(--warn-soft);color:var(--warn)} .band.bad{background:var(--bad-soft);color:var(--bad)}
+.loss{display:flex;flex-direction:column;gap:10px}
+.lrow{display:grid;grid-template-columns:150px 1fr 54px;gap:10px;align-items:center;font-size:14px}
+@media (max-width:520px){.lrow{grid-template-columns:110px 1fr 46px;font-size:13px}}
+.track{height:14px;background:var(--bg);border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.fill{height:100%;border-radius:6px 0 0 6px;transition:width .25s}
+.lrow .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+.fix{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;margin-top:14px;background:var(--bg)}
+.fix b{display:block;margin-bottom:2px}
+svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--line);stroke-width:1}
+.tx{fill:var(--muted);font-size:11px;font-family:inherit}
+.curve{fill:none;stroke:var(--accent);stroke-width:2.5}
+.dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.fc-track{position:relative;height:34px;background:var(--bg);border:1px solid var(--line);border-radius:8px;margin:14px 0 6px}
+.fc-band{position:absolute;top:4px;bottom:4px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:5px;transition:left .25s,width .25s}
+.fc-mid{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink)}
+.fc-lab{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:760px){.principles{grid-template-columns:1fr}}
+.principles div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.principles b{display:block;margin-bottom:4px}
+.principles p{margin:0;color:var(--muted)}
+.fine{font-size:12px;color:var(--muted);margin:8px 0 0}
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.mwrap{overflow-x:auto;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.mtab{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+.mtab th,.mtab td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.mtab tr:last-child td{border-bottom:0}
+.mtab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Gong and Salesforce: Revenue Signal Reliability Simulator</h1>
+  <p class="lede">A forecast is only as reliable as the signals feeding it. Move the four levers that decide whether call intelligence in Gong and deal data in Salesforce can be trusted at forecast time, and see where confidence is lost first.</p>
+  <div class="notice">Illustrative model, not measured data. The index is a relative signal, not a forecast accuracy percentage, and the weights are chosen to show behavior rather than to predict any real organization. The commit amount is fictional.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-c">
+        <h2 id="t-c">Levers</h2>
+        <div class="chips" role="group" aria-label="Preset">
+          <button class="chip" data-p="healthy" aria-pressed="true">Healthy</button>
+          <button class="chip" data-p="sprawl" aria-pressed="false">Fast-growth sprawl</button>
+          <button class="chip" data-p="legacy" aria-pressed="false">Legacy batch sync</button>
+          <button class="chip" data-p="thin" aria-pressed="false">Thin call capture</button>
+        </div>
+        <div class="ctl"><label for="cov"><span class="sw" style="background:var(--c1)"></span>Transcript coverage <output id="o-cov"></output></label><small>Share of relevant customer calls captured and processed.</small><input type="range" id="cov" min="20" max="100" step="1"></div>
+        <div class="ctl"><label for="hyg"><span class="sw" style="background:var(--c2)"></span>CRM field hygiene <output id="o-hyg"></output></label><small>Share of opportunities with complete, consistent required fields.</small><input type="range" id="hyg" min="20" max="100" step="1"></div>
+        <div class="ctl"><label for="lat"><span class="sw" style="background:var(--c3)"></span>Sync latency <output id="o-lat"></output></label><small>Time from a call to the signal being usable in the CRM.</small><input type="range" id="lat" min="0" max="72" step="1"></div>
+        <div class="ctl"><label for="own"><span class="sw" style="background:var(--c4)"></span>Tracker ownership <output id="o-own"></output></label><small>Share of trackers and deal signals with a named owner and review cadence.</small><input type="range" id="own" min="0" max="100" step="1"></div>
+        <div class="ctl" style="margin-bottom:0"><label for="vel">Sales cycle speed</label><small>Fast cycles make stale signals expire sooner.</small>
+          <select id="vel"><option value="24">Fast (days to weeks)</option><option value="72" selected>Medium (weeks to months)</option><option value="168">Slow (months)</option></select></div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-s">
+        <h2 id="t-s">Illustrative signal index</h2>
+        <div class="score"><span class="big" id="idx">0</span><span class="of">out of 100</span></div>
+        <span class="band" id="band"></span>
+        <div class="fc-track" aria-hidden="true"><div class="fc-band" id="fcb"></div><div class="fc-mid" style="left:50%"></div></div>
+        <div class="fc-lab"><span id="fcl"></span><span>Fictional commit: $10.0M</span><span id="fch"></span></div>
+        <p class="fine">The band is a visual device for uncertainty, not a statistical interval.</p>
+      </section>
+
+      <section class="card" aria-labelledby="t-l">
+        <h2 id="t-l">Where confidence is lost</h2>
+        <div class="loss" id="loss"></div>
+        <div class="fix" id="fix"></div>
+      </section>
+
+      <section class="card" aria-labelledby="t-g">
+        <h2 id="t-g">Signal index versus sync latency</h2>
+        <svg viewBox="0 0 560 190" role="img" aria-label="Signal index decays as sync latency grows, with the current setting marked" id="chart"></svg>
+        <p class="fine">Other levers held at their current values. A faster sales cycle bends the curve down sooner.</p>
+      </section>
+    </div>
+  </div>
+
+  <section style="margin-top:24px" aria-labelledby="t-d">
+    <h2 id="t-d">What the model encodes</h2>
+    <div class="principles">
+      <div><b>Weakest link, not average</b><p>The factors multiply. A strong capture rate does not compensate for dirty CRM fields, so one neglected lever drags the whole index.</p></div>
+      <div><b>Freshness decays with velocity</b><p>A signal that is a day old is fine for a slow enterprise cycle and stale for a fast one. Latency targets belong to the sales motion, not to the integration.</p></div>
+      <div><b>Ownership is an architecture concern</b><p>A tracker with no owner still fires, but nobody maintains its definition. Unowned signals add noise that looks like data.</p></div>
+    </div>
+  </section>
+
+  <section class="real" aria-labelledby="t-meas"><h2 id="t-meas">Measure it instead of modeling it</h2><p class="rnote" style="margin:0 0 10px">A production version would report these four measurements instead of a modeled score.</p><div class="mwrap"><table class="mtab"><thead><tr><th>Lever</th><th>What to measure</th><th>Where the data comes from</th></tr></thead><tbody><tr><td>Transcript coverage</td><td>Calls captured divided by meetings expected to be recorded</td><td>Gong calls for a date range, and the organization's meeting records</td></tr><tr><td>CRM field hygiene</td><td>Share of Opportunities with complete, consistent required fields</td><td>Queries over Opportunity records, field types from Salesforce describe</td></tr><tr><td>Sync latency</td><td>Time from the end of a call to the update of the related record</td><td>Call data from Gong and record timestamps in the CRM</td></tr><tr><td>Tracker ownership</td><td>Share of trackers with a named owner and review date</td><td>An ownership registry kept by the organization</td></tr></tbody></table></div></section>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid"><div><b>Data sources</b><ul><li>Coverage: calls captured in Gong for a date range, compared with the meetings the organization expects to be recorded.</li><li>Hygiene: share of Opportunities with complete required fields, measured with queries and Salesforce describe for field types.</li><li>Latency: time between a call and the update of the related CRM record.</li><li>Ownership: a governance record the organization keeps. Gong can list tracker definitions through its settings API, and this page does not assume it returns owners.</li></ul></div><div><b>Limits and prerequisites</b><ul><li>Gong API credentials are issued by a technical administrator.</li><li>Gong documents default limits of 3 calls per second and 10,000 calls per day for the company.</li><li>Salesforce API requests are pooled per org within a 24-hour period. For Enterprise Edition the allowance is 100,000 plus a per-license amount and any purchased add-ons, and exceeding it returns HTTP 403 REQUEST_LIMIT_EXCEEDED.</li></ul></div><div><b>How it would be validated</b><ul><li>Report the four measurements as they are, without a composite index.</li><li>Test against the organization's own history whether they relate to forecast error. That relationship is not assumed here.</li><li>Spot check a sample of records by hand for each measurement.</li></ul></div></div>
+    <p class="rnote">What this demo does not claim: the weights and the index are illustrative and have no empirical basis. They show how weak links compound, not how any real forecast behaves.</p>
+    <p class="rnote">References: <a href="https://help.gong.io/docs/receive-access-to-the-api.md" target="_blank" rel="noopener">Gong API access</a> &middot; <a href="https://help.gong.io/apidocs/introduction-2.md" target="_blank" rel="noopener">Gong API introduction</a> &middot; <a href="https://help.gong.io/docs/trackers-overview" target="_blank" rel="noopener">Gong trackers</a> &middot; <a href="https://developer.salesforce.com/docs/platform/salesforce-app-limits-cheatsheet/guide/salesforce-app-limits-platform-api.html" target="_blank" rel="noopener">Salesforce API request limits</a> &middot; <a href="https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobject.htm" target="_blank" rel="noopener">Salesforce describeSObject</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Gong and Salesforce are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by either vendor.</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var PRESETS = {
+    healthy:{cov:95,hyg:92,lat:2,own:92,vel:72},
+    sprawl:{cov:88,hyg:58,lat:6,own:30,vel:24},
+    legacy:{cov:82,hyg:78,lat:48,own:70,vel:72},
+    thin:{cov:38,hyg:85,lat:6,own:80,vel:72}
+  };
+  var META = [
+    {k:"cov",name:"Transcript coverage",short:"transcript coverage",color:"var(--c1)",fix:"Close the capture gap. Widen recording rules and consent coverage, and report coverage by segment so blind spots are visible before they reach the forecast."},
+    {k:"hyg",name:"CRM field hygiene",short:"CRM field hygiene",color:"var(--c2)",fix:"Enforce required fields at stage gates with validation rules, deduplicate sources of truth, and give every forecast-critical field a single writer."},
+    {k:"lat",name:"Sync latency",short:"sync latency",color:"var(--c3)",fix:"Move from batch to event-driven sync for forecast-critical objects, and set a freshness target per object that matches the sales cycle."},
+    {k:"own",name:"Tracker ownership",short:"tracker ownership",color:"var(--c4)",fix:"Assign an owner and a review cadence to every tracker and deal signal, and retire the ones nobody can justify."}
+  ];
+
+  function read(){return {cov:+$("cov").value,hyg:+$("hyg").value,lat:+$("lat").value,own:+$("own").value,vel:+$("vel").value}}
+  function factors(s){
+    return {cov:Math.pow(s.cov/100,0.8), hyg:s.hyg/100, lat:Math.exp(-s.lat/s.vel), own:0.6+0.4*s.own/100};
+  }
+  function index(s){var f=factors(s); return 100*f.cov*f.hyg*f.lat*f.own}
+
+  function render(){
+    var s=read(), f=factors(s), idx=index(s);
+    $("o-cov").textContent=s.cov+"%"; $("o-hyg").textContent=s.hyg+"%"; $("o-lat").textContent=s.lat+" h"; $("o-own").textContent=s.own+"%";
+    $("idx").textContent=Math.round(idx);
+    var b=$("band");
+    if(idx>=75){b.className="band ok";b.textContent="Reliable enough for commit calls"}
+    else if(idx>=50){b.className="band warn";b.textContent="Usable with human review"}
+    else {b.className="band bad";b.textContent="Directional only"}
+
+    var half=(100-idx)/100*0.25, lo=10*(1-half), hi=10*(1+half);
+    var scaleLo=6, scaleHi=14, pos=function(v){return (v-scaleLo)/(scaleHi-scaleLo)*100};
+    $("fcb").style.left=pos(lo)+"%"; $("fcb").style.width=Math.max(pos(hi)-pos(lo),0.8)+"%";
+    $("fcl").textContent="$"+lo.toFixed(1)+"M"; $("fch").textContent="$"+hi.toFixed(1)+"M";
+
+    var losses=META.map(function(m){return {m:m,L:-Math.log(f[m.k])}});
+    var tot=losses.reduce(function(a,x){return a+x.L},0);
+    losses.forEach(function(x){x.pts= tot>1e-9 ? (100-idx)*x.L/tot : 0});
+    losses.sort(function(a,b){return b.pts-a.pts});
+    var max=Math.max.apply(null,losses.map(function(x){return x.pts}).concat([1]));
+    $("loss").innerHTML=losses.map(function(x){
+      return '<div class="lrow"><span>'+x.m.name+'</span><div class="track"><div class="fill" style="width:'+(x.pts/max*100)+'%;background:'+x.m.color+'"></div></div><span class="v">-'+x.pts.toFixed(0)+'</span></div>';
+    }).join("");
+    var top=losses[0];
+    $("fix").innerHTML = top.pts<2
+      ? '<b>No dominant weakness</b>All four levers are close to healthy. Keep them from drifting by monitoring each one.'
+      : '<b>Biggest drag: '+top.m.short+'</b>'+top.m.fix;
+
+    drawChart(s,idx);
+  }
+
+  function drawChart(s,idx){
+    var W=560,H=190,L=40,R=12,T=12,B=30,pw=W-L-R,ph=H-T-B;
+    var X=function(h){return L+h/72*pw}, Y=function(v){return T+(1-v/100)*ph};
+    var pts=[], i;
+    for(i=0;i<=72;i+=2){ var t={cov:s.cov,hyg:s.hyg,lat:i,own:s.own,vel:s.vel}; pts.push(X(i).toFixed(1)+","+Y(index(t)).toFixed(1)); }
+    var g='';
+    [0,25,50,75,100].forEach(function(v){g+='<line class="ax" x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/><text class="tx" x="'+(L-6)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+v+'</text>'});
+    [0,24,48,72].forEach(function(h){g+='<text class="tx" x="'+X(h)+'" y="'+(H-10)+'" text-anchor="middle">'+h+' h</text>'});
+    g+='<polyline class="curve" points="'+pts.join(" ")+'"/>';
+    g+='<circle class="dot" cx="'+X(s.lat)+'" cy="'+Y(idx)+'" r="6"/>';
+    $("chart").innerHTML=g;
+  }
+
+  function apply(p){
+    $("cov").value=p.cov; $("hyg").value=p.hyg; $("lat").value=p.lat; $("own").value=p.own; $("vel").value=String(p.vel);
+    render();
+  }
+  document.querySelectorAll(".chip").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")});
+      b.setAttribute("aria-pressed","true"); apply(PRESETS[b.dataset.p]);
+    });
+  });
+  ["cov","hyg","lat","own","vel"].forEach(function(id){
+    $(id).addEventListener("input",function(){
+      document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")});
+      render();
+    });
+  });
+  apply(PRESETS.healthy);
+})();
+</script>
+</body>
+</html>

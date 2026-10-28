@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Sales Cloud: Lead Routing Simulator | Andres Videla</title>
+<meta name="description" content="A Lightning-style Leads list view with search, filters, sorting and a routing component. Pick a rule, select a lead and see why it landed with its owner, and what each rule needs in a real org. Fictional data.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Salesforce Sales Cloud: Lead Routing Simulator">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Territory, round robin and capacity-aware routing shown on a Lightning-style Leads list view with fictional leads, plus the Salesforce features each one depends on.">
+<meta property="og:image" content="https://andres-videla.com/assets/lead-routing-simulator-demo.png">
+<meta property="og:url" content="https://andres-videla.com/demo/lead-routing-simulator/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6; --accent:#2F4B6E;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sf-bg:#F3F3F3; --sf-card:#FFFFFF; --sf-line:#DDDBDA; --sf-ink:#181818; --sf-muted:#5C5C5C; --sf-soft:#FAFAF9;
+  --sf-brand:#0176D3; --sf-brand-ink:#FFFFFF; --sf-hover:#F3F3F3; --sf-bar:#B0ADAB; --sf-new:#0176D3; --sf-over:#BA0517;
+  --sf-ok-bg:#CDEFC4; --sf-ok:#0B5A24; --sf-warn-bg:#FFE9B5; --sf-warn:#6B4A00; --sf-err-bg:#FEDED8; --sf-err:#8E030B;
+  --sf-info-bg:#E5F2FD; --sf-info:#014486; --sf-lead:#F88962; --sf-mark:#FFF1A8;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946; --accent:#8FB3E6; color-scheme:dark;
+    --sf-bg:#12161C; --sf-card:#1C222B; --sf-line:#333B47; --sf-ink:#E7EBF1; --sf-muted:#9AA6B5; --sf-soft:#232A34;
+    --sf-brand:#5EB0F5; --sf-brand-ink:#0B1622; --sf-hover:#232A34; --sf-bar:#566579; --sf-new:#5EB0F5; --sf-over:#F58B82;
+    --sf-ok-bg:#1C3A28; --sf-ok:#8BE0A8; --sf-warn-bg:#3D2F15; --sf-warn:#F0C27A; --sf-err-bg:#43201E; --sf-err:#FBA39B;
+    --sf-info-bg:#14304A; --sf-info:#9CCBF5; --sf-mark:#5A4B12;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946; --accent:#8FB3E6; color-scheme:dark;
+  --sf-bg:#12161C; --sf-card:#1C222B; --sf-line:#333B47; --sf-ink:#E7EBF1; --sf-muted:#9AA6B5; --sf-soft:#232A34;
+  --sf-brand:#5EB0F5; --sf-brand-ink:#0B1622; --sf-hover:#232A34; --sf-bar:#566579; --sf-new:#5EB0F5; --sf-over:#F58B82;
+  --sf-ok-bg:#1C3A28; --sf-ok:#8BE0A8; --sf-warn-bg:#3D2F15; --sf-warn:#F0C27A; --sf-err-bg:#43201E; --sf-err:#FBA39B;
+  --sf-info-bg:#14304A; --sf-info:#9CCBF5; --sf-mark:#5A4B12;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);overflow-wrap:anywhere}
+:focus-visible{outline:2px solid var(--sf-brand);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.back{color:var(--accent);display:inline-block;margin-bottom:14px;font-size:14px}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 20px 48px}
+h1{font:700 clamp(1.6rem,3.6vw,2.4rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:50rem;margin:0 0 14px}
+.cap{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+
+.sf{background:var(--sf-bg);color:var(--sf-ink);border:1px solid var(--sf-line);border-radius:8px;overflow:hidden;font:14px/1.45 var(--sans)}
+.sf-gh{display:flex;align-items:center;gap:14px;background:var(--sf-card);border-bottom:1px solid var(--sf-line);border-top:3px solid var(--sf-brand);padding:0 14px;min-height:48px}
+.sf-dots{display:grid;grid-template-columns:repeat(3,4px);gap:3px;flex:none}
+.sf-dots i{width:4px;height:4px;border-radius:50%;background:var(--sf-muted);display:block}
+.sf-app{font:600 16px var(--sans);flex:none}
+.sf-search{flex:1 1 180px;max-width:360px;border:1px solid var(--sf-line);border-radius:4px;background:var(--sf-soft);color:var(--sf-ink);padding:5px 10px;font:13px var(--sans);min-width:0}
+.sf-search:focus{outline:2px solid var(--sf-brand);outline-offset:0;background:var(--sf-card)}
+.sf-nav{display:flex;gap:2px;overflow:hidden;white-space:nowrap;min-width:0;align-self:stretch}
+.sf-nav span{display:flex;align-items:center;padding:0 10px;color:var(--sf-ink);font-size:13.5px;border-bottom:3px solid transparent}
+.sf-nav span.on{font-weight:700;border-bottom-color:var(--sf-brand)}
+.sf-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px;padding:12px;align-items:start}
+.sf-main{display:grid;gap:12px;min-width:0}
+.sf-card{background:var(--sf-card);border:1px solid var(--sf-line);border-radius:4px;min-width:0}
+.sf-head{display:flex;gap:12px;align-items:center;padding:12px 14px;flex-wrap:wrap}
+.sf-ico{flex:none;width:40px;height:40px;border-radius:4px;background:var(--sf-lead);display:flex;align-items:center;justify-content:center}
+.sf-ico svg{width:24px;height:24px;display:block}
+.sf-ttl{min-width:0;flex:1 1 200px}
+.sf-ttl small{display:block;color:var(--sf-muted);font-size:12px;line-height:1.2}
+.sf-ttl b{display:block;font:700 19px/1.25 var(--sans)}
+.sf-ttl span{display:block;color:var(--sf-muted);font-size:12px}
+.sf-hl{display:flex;gap:18px;flex-wrap:wrap}
+.sf-hl div{min-width:0}
+.sf-hl small{display:block;color:var(--sf-muted);font-size:11.5px;line-height:1.2}
+.sf-hl b{display:block;font:700 15px/1.3 var(--sans);font-variant-numeric:tabular-nums}
+.sf-hl b.bad{color:var(--sf-over)} .sf-hl b.good{color:var(--sf-ok)}
+.sf-btn{border:1px solid var(--sf-line);background:var(--sf-card);color:var(--sf-brand);padding:5px 14px;border-radius:4px;cursor:pointer;font:600 13px var(--sans)}
+.sf-btn:hover{background:var(--sf-hover)}
+.sf-alert{display:flex;gap:8px;align-items:flex-start;margin:12px 14px 0;padding:8px 12px;border-radius:4px;font-size:13.5px;background:var(--sf-info-bg);color:var(--sf-info)}
+.sf-alert.warn{background:var(--sf-warn-bg);color:var(--sf-warn)}
+.sf-alert.err{background:var(--sf-err-bg);color:var(--sf-err)}
+.sf-alert.ok{background:var(--sf-ok-bg);color:var(--sf-ok)}
+.sf-alert b{flex:none;width:18px;height:18px;border-radius:50%;background:currentColor;display:inline-flex;align-items:center;justify-content:center;margin-top:1px}
+.sf-alert b i{font:700 12px/1 var(--sans);font-style:normal;color:var(--sf-card)}
+.sf-how{margin:10px 14px 0;color:var(--sf-muted);font-size:12.5px}
+.sf-how em{font-style:normal;display:inline-block;padding:0 8px;border:1px solid var(--sf-line);border-radius:99px;margin-right:6px;font-size:11.5px}
+.sf-tabs{display:flex;gap:2px;margin:12px 0 0;padding:0 8px;border-bottom:1px solid var(--sf-line);overflow-x:auto}
+.sf-tab{flex:none;border:0;background:none;color:var(--sf-muted);padding:8px 10px;font:600 13px var(--sans);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.sf-tab:hover{color:var(--sf-ink)}
+.sf-tab[aria-selected="true"]{color:var(--sf-ink);border-bottom-color:var(--sf-brand)}
+.sf-tab span{display:inline-block;margin-left:5px;padding:0 7px;border-radius:99px;background:var(--sf-soft);border:1px solid var(--sf-line);font-size:11.5px;font-variant-numeric:tabular-nums}
+.sf-fbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 14px 0;min-height:0;font-size:12.5px;color:var(--sf-muted)}
+.sf-fbar:empty{display:none}
+.sf-pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--sf-line);background:var(--sf-soft);color:var(--sf-ink);border-radius:99px;padding:2px 4px 2px 10px;font:12.5px var(--sans);cursor:pointer}
+.sf-pill i{font-style:normal;width:16px;height:16px;border-radius:50%;background:var(--sf-line);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1}
+.sf-th,.sf-tr{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.1fr) minmax(0,.9fr) 64px minmax(0,1fr) 128px;gap:0 10px;align-items:center;padding:8px 14px}
+.sf-th{margin-top:10px;background:var(--sf-soft);border-top:1px solid var(--sf-line);border-bottom:1px solid var(--sf-line)}
+.sf-th button{appearance:none;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--sf-muted);font:700 11.5px var(--sans);letter-spacing:.04em;text-transform:uppercase}
+.sf-th button:hover{color:var(--sf-ink)}
+.sf-th button[data-dir]::after{content:" \25B2";font-size:9px}
+.sf-th button[data-dir="desc"]::after{content:" \25BC"}
+.sf-list{list-style:none;margin:0;padding:0}
+.sf-tr{border-bottom:1px solid var(--sf-line);row-gap:2px;cursor:pointer}
+.sf-tr:last-child{border-bottom:0}
+.sf-tr:hover{background:var(--sf-hover)}
+.sf-tr[aria-selected="true"]{background:var(--sf-info-bg);box-shadow:inset 3px 0 0 var(--sf-brand)}
+.sf-link{color:var(--sf-brand);font-weight:500}
+.sf-cell{min-width:0;font-size:13.5px}
+.sf-co{color:var(--sf-ink)}
+.sf-own{display:flex;align-items:center;gap:6px}
+.sf-av{flex:none;width:22px;height:22px;border-radius:50%;background:var(--sf-brand);color:var(--sf-brand-ink);font:700 11px/22px var(--sans);text-align:center}
+.sf-av.q{border-radius:4px;background:var(--sf-bar);color:var(--sf-card)}
+.sf-why{grid-column:1/-1;color:var(--sf-muted);font-size:12px;margin:0}
+.sf-empty{padding:18px 14px;color:var(--sf-muted);font-size:13.5px;text-align:center;border-bottom:0;cursor:default}
+.sf-empty:hover{background:none}
+.sf-badge{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.sf-badge.ready{background:var(--sf-ok-bg);color:var(--sf-ok)}
+.sf-badge.stuck{background:var(--sf-warn-bg);color:var(--sf-warn)}
+.sf-badge.none{background:var(--sf-err-bg);color:var(--sf-err)}
+.sf-hot{color:var(--sf-over);font-weight:700}
+.sf-warm{color:var(--sf-warn);font-weight:700}
+mark{background:var(--sf-mark);color:inherit;border-radius:2px;padding:0 1px}
+.sf-ch{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--sf-line);font-weight:700}
+.sf-ch i{width:22px;height:22px;border-radius:4px;background:var(--sf-brand);display:inline-block;position:relative;flex:none}
+.sf-ch i::after{content:"";position:absolute;left:5px;top:5px;width:12px;height:12px;border:2px solid var(--sf-brand-ink);border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+.sf-cb{padding:12px 14px}
+.sf-kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 14px;margin:0 0 12px}
+.sf-kv div{min-width:0;border-bottom:1px solid var(--sf-line);padding-bottom:4px}
+.sf-kv small{display:block;color:var(--sf-muted);font-size:11.5px}
+.sf-kv span{font-size:13.5px}
+.sf-trace{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 0}
+.sf-step{border:1px solid var(--sf-line);border-radius:4px;padding:8px 10px;font-size:13px;min-width:0}
+.sf-step.pick{border-color:var(--sf-brand);box-shadow:inset 0 0 0 1px var(--sf-brand)}
+.sf-step b{display:block}
+.sf-step small{display:block;color:var(--sf-muted);font-size:12px;margin-top:2px}
+.sf-sub{font-size:12px;font-weight:700;color:var(--sf-muted);margin:10px 0 0}
+.sf-side .sf-card{padding:0}
+.sf-fs{border:0;margin:0;padding:0;min-width:0}
+.sf-fs legend{font-size:12px;font-weight:700;color:var(--sf-muted);padding:0;margin-bottom:6px}
+.sf-opt{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border:1px solid var(--sf-line);border-radius:4px;margin-bottom:6px;cursor:pointer;font-size:13.5px;line-height:1.3}
+.sf-opt:hover{background:var(--sf-hover)}
+.sf-opt input{margin-top:2px;accent-color:var(--sf-brand);flex:none}
+.sf-opt.on{border-color:var(--sf-brand);box-shadow:inset 0 0 0 1px var(--sf-brand)}
+.sf-opt small{display:block;color:var(--sf-muted);font-size:12px}
+.sf-field{margin-top:12px}
+.sf-field label{font-size:12px;font-weight:700;color:var(--sf-muted);display:flex;justify-content:space-between;gap:8px}
+.sf-field label b{color:var(--sf-ink);font-family:var(--mono)}
+.sf-field input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--sf-brand)}
+.sf-field small{display:block;color:var(--sf-muted);font-size:12px;line-height:1.35}
+.sf-chk{display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:13.5px;cursor:pointer}
+.sf-chk input{margin-top:3px;accent-color:var(--sf-brand)}
+.sf-chk small{display:block;color:var(--sf-muted);font-size:12px}
+.sf-reps{margin-top:14px;padding-top:12px;border-top:1px solid var(--sf-line)}
+.sf-reps h3{margin:0 0 2px;font:700 12px var(--sans);color:var(--sf-muted)}
+.sf-reps p{margin:0 0 6px;font-size:11.5px;color:var(--sf-muted)}
+.sf-rbtn{display:block;width:100%;appearance:none;border:1px solid transparent;background:none;color:inherit;text-align:left;padding:4px 6px;margin:0 -6px 2px;border-radius:4px;cursor:pointer;font:inherit}
+.sf-rbtn:hover{background:var(--sf-hover)}
+.sf-rbtn[aria-pressed="true"]{border-color:var(--sf-brand);background:var(--sf-info-bg)}
+.sf-rr{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:3px}
+.sf-rr b{font-family:var(--mono);font-weight:600}
+.sf-bar{position:relative;display:flex;height:8px;border-radius:4px;background:var(--sf-line)}
+.sf-bar div{height:100%}
+.sf-bar div:first-child{border-radius:4px 0 0 4px}
+.sf-s-open{background:var(--sf-bar)} .sf-s-new{background:var(--sf-new)} .sf-s-over{background:var(--sf-over)}
+.sf-lim{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--sf-ink)}
+.sf-leg{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:11.5px;color:var(--sf-muted);margin-top:8px}
+.sf-leg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
+.sf-btn.reset{margin-top:14px;width:100%}
+
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--rule);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.real h2{font:700 1.2rem/1.2 var(--serif);margin:0 0 12px}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:16px}
+.foot p{margin:0 0 6px}
+
+@media (max-width:900px){
+  .sf-body{grid-template-columns:1fr}
+  .sf-side{order:-1}
+}
+@media (max-width:700px){
+  .sf-th{display:none}
+  .sf-tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name rating" "co co" "own stat" "why why"}
+  .sf-c-name{grid-area:name} .sf-c-co{grid-area:co} .sf-c-reg{display:none} .sf-c-rate{grid-area:rating;justify-self:end}
+  .sf-c-own{grid-area:own} .sf-c-stat{grid-area:stat;justify-self:end} .sf-why{grid-area:why}
+  .sf-gh{flex-wrap:wrap;padding:8px 10px;gap:8px 10px}
+  .sf-search{order:3;flex:1 1 100%;max-width:none}
+  .sf-nav{display:none}
+  .sf-kv,.sf-trace{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .wrap{padding:16px 14px 40px}
+  .sf-body{padding:8px;gap:8px}
+}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative simulator with generic Lightning-style styling, not the real product interface. The leads, reps and numbers are fictional, no real systems or data are involved, and the routing logic is a simplified model.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce Sales Cloud: lead routing simulator</h1>
+  <p class="dek">Good leads lose their value when they reach the wrong person, or nobody. Below is a Lightning-style Leads list view with a routing component beside it. Pick a rule, then search, filter and sort the list, and select a lead to see why it landed with its owner.</p>
+
+  <div class="sf" role="group" aria-label="Lightning-style Leads list view with a lead routing component">
+    <div class="sf-gh">
+      <div class="sf-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="sf-app">Sales</div>
+      <input class="sf-search" id="q" type="search" placeholder="Search leads..." aria-label="Search leads by name, company, region, owner or result" autocomplete="off">
+      <div class="sf-nav" aria-hidden="true"><span>Home</span><span class="on">Leads</span><span>Accounts</span><span>Opportunities</span><span>Reports</span></div>
+    </div>
+    <div class="sf-body">
+      <div class="sf-main">
+        <div class="sf-card sf-head">
+          <div class="sf-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#fff"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="#fff"/></svg></div>
+          <div class="sf-ttl"><small>Leads</small><b>New this week</b><span id="sum"></span></div>
+          <div class="sf-hl" id="hl"></div>
+        </div>
+        <div class="sf-card">
+          <div class="sf-alert" id="alert" role="status" aria-live="polite"></div>
+          <p class="sf-how" id="how"></p>
+          <div class="sf-tabs" id="tabs" role="tablist" aria-label="List view filter"></div>
+          <div class="sf-fbar" id="fbar"></div>
+          <div class="sf-th" id="th"></div>
+          <ul class="sf-list" id="list" role="listbox" aria-label="Leads"></ul>
+        </div>
+        <div class="sf-card" id="detail" aria-live="polite"></div>
+      </div>
+      <aside class="sf-side" aria-label="Lead routing component">
+        <div class="sf-card">
+          <div class="sf-ch"><i aria-hidden="true"></i>Lead routing</div>
+          <div class="sf-cb">
+            <fieldset class="sf-fs"><legend>Routing rule</legend><div id="rules"></div></fieldset>
+            <div class="sf-field">
+              <label for="cap">Open leads each rep can hold <b id="capv"></b></label>
+              <input id="cap" type="range" min="3" max="8" step="1" value="5">
+              <small>Each rep already carries some open leads. New leads count against this limit.</small>
+            </div>
+            <label class="sf-chk"><input type="checkbox" id="ooo"><span>Bianca is out of office<small>She stays in the rotation unless the rule checks availability.</small></span></label>
+            <div class="sf-reps"><h3>Rep workload after routing</h3><p>Select a rep to filter the list by owner.</p><div id="reps"></div>
+              <div class="sf-leg"><span><i style="background:var(--sf-bar)"></i>Open</span><span><i style="background:var(--sf-new)"></i>New</span><span><i style="background:var(--sf-over)"></i>Over limit</span><span><i style="background:var(--sf-ink);width:3px"></i>Limit</span></div>
+            </div>
+            <button class="sf-btn reset" id="reset" type="button">Reset</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid">
+      <div><b>Data sources</b><ul>
+        <li>Standard Lead fields such as Country, State, Lead Source and Rating. A region is not a standard field, so derive it from country and state or add a custom field.</li>
+        <li>Lead Owner, which can be a user or a queue, and a count of open leads per user from a report or a scheduled count.</li>
+        <li>Rep availability from Omni-Channel presence or a custom out-of-office field on the user. Confirm which one your org uses.</li>
+      </ul></div>
+      <div><b>Limits and prerequisites</b><ul>
+        <li>Lead assignment rules check entries in order, the first match wins, and each entry assigns a user or a queue. Only one rule is active at a time, and a final entry with no criteria can catch the rest.</li>
+        <li>There is no built-in round robin rule type. The documented pattern uses an autonumber field, a formula and one entry per user.</li>
+        <li>Capacity-aware routing uses Omni-Channel: a flow that ends in a Route Work action, called from a record-triggered flow for leads. A service channel for the Lead object and the licensing are things to confirm in the target org.</li>
+        <li>Search, list view filters, sorting and row selection are ordinary list view behavior. The Routing result column, the decision trace and the side panel are illustrations: a real build would use a custom field set by the flow, a stored reason, and a report or a Lightning page component.</li>
+        <li>Sales Territories can also link leads, but Salesforce guidance favors standard lead assignment rules or a separate process for lead routing. Territory here is only a region field.</li>
+      </ul></div>
+      <div><b>How it would be validated</b><ul>
+        <li>Replay a sample of past leads through the proposed rules in a sandbox and compare the owner each rule picks with the actual owner.</li>
+        <li>Report on leads still owned by a queue, and on leads whose owner was out or over the limit when the lead arrived.</li>
+        <li>Pilot one region first and review the leads that fell through before widening the rule.</li>
+      </ul></div>
+    </div>
+    <p class="rnote">What this demo does not claim: it shows no response times, conversion or fairness results, the six leads and three reps are fictional, and the tie-break choices (first match, most room first) are illustrative. The counts shown are simple tallies of this simulation, not benchmarks. The capacity rules model what an Omni-Channel flow could do and are not a copy of a specific configuration. The interface styling is generic and is not the product itself.</p>
+    <p class="rnote">References: <a href="https://help.salesforce.com/s/articleView?id=creating_assignment_rules.htm&amp;language=en_US&amp;type=0" rel="noopener">Set Up Assignment Rules</a>, <a href="https://help.salesforce.com/s/articleView?id=sf.essentials_round_robin_lead_assignment.htm&amp;language=en_US&amp;type=5" rel="noopener">Create a Round Robin Lead Assignment Rule</a>, <a href="https://help.salesforce.com/s/articleView?id=service.omnichannel_flows.htm&amp;language=en_US&amp;type=5" rel="noopener">Advanced Routing with Omni-Channel Flows</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=service.omnichannel_route_work.htm&amp;type=5" rel="noopener">Route Work with Omni-Channel</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=sales.tm2_intro.htm&amp;type=5" rel="noopener">Sales Territories</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <div class="foot">
+    <p>Salesforce and other product names are trademarks of their respective owners. This page is not affiliated with or endorsed by any vendor.</p>
+    <p><a href="/portfolio/" class="back">Back to portfolio</a></p>
+  </div>
+</div>
+
+<script>
+(function(){
+var $=function(id){return document.getElementById(id)};
+var REPS=[
+  {id:'avery',name:'Avery',region:'North America',open:4},
+  {id:'bianca',name:'Bianca',region:'EMEA',open:3},
+  {id:'chen',name:'Chen',region:'North America',open:2}
+];
+var LEADS=[
+  {name:'Mara Quinn',co:'Northwind Logistics',region:'North America',hot:true},
+  {name:'Idris Okafor',co:'Harbor Analytics',region:'EMEA',hot:true},
+  {name:'Tomas Reyes',co:'Birch and Vale',region:'North America',hot:true},
+  {name:'Hana Mori',co:'Kestrel Foods',region:'APAC',hot:true},
+  {name:'Priya Nair',co:'Cobalt Retail',region:'North America',hot:false},
+  {name:'Lena Vogel',co:'Juniper Health',region:'EMEA',hot:false}
+];
+var RULES=[
+  {id:'territory',label:'Territory only',tag:'Documented',how:'A standard lead assignment rule. Entries are checked in order, the first match wins, and a catch-all entry or the default owner takes the rest. It does not look at workload or availability.'},
+  {id:'robin',label:'Round robin',tag:'Documented pattern',how:'Salesforce has no built-in round robin rule type. A documented pattern rotates owners with an autonumber field and one rule entry per user. It ignores region, workload and availability.'},
+  {id:'capacity',label:'Territory plus capacity',tag:'Illustrative model',how:'Models a flow that picks an available rep in the territory with room, most room first, and leaves the lead in a queue when nobody qualifies. This is what Omni-Channel routing could do.'},
+  {id:'fallback',label:'Territory, capacity and fallback',tag:'Illustrative model',how:'Same as above, but when nobody in the territory qualifies the lead goes to the available rep with the most room anywhere. A lead waits in the queue only when the whole team is out or full.'}
+];
+var TABS=[{id:'all',label:'All leads'},{id:'hot',label:'Hot'},{id:'attention',label:'Needs attention'},{id:'none',label:'No owner'}];
+var COLS=[{k:'name',l:'Lead'},{k:'co',l:'Company'},{k:'region',l:'Region'},{k:'rate',l:'Rating'},{k:'owner',l:'Lead Owner'},{k:'stat',l:'Routing result'}];
+var DEFAULT={rule:'territory',cap:5,ooo:false,q:'',tab:'all',sort:null,sel:'Hana Mori',ownerF:null};
+var S={};function resetState(){for(var k in DEFAULT)S[k]=DEFAULT[k]}
+resetState();
+var lastFocus=null;
+
+function available(rep){return !(rep.id==='bianca'&&S.ooo)}
+function mostRoom(list,load){
+  var best=null;
+  list.forEach(function(r){var room=S.cap-load[r.id];if(room>0&&available(r)&&(!best||room>S.cap-load[best.id]))best=r});
+  return best;
+}
+function verdict(c,owner,usedFallback){
+  var picked=owner&&owner.id===c.rep.id;
+  if(S.rule==='territory'){
+    if(picked)return 'Chosen: first matching entry';
+    return c.inTerr?'Skipped: an earlier entry already matched':'Entry does not match this region';
+  }
+  if(S.rule==='robin')return picked?'Chosen: next in the rotation':'Not next in the rotation';
+  if(picked)return usedFallback?'Chosen: fallback, most room anywhere':'Chosen: most room in the territory';
+  if(!c.inTerr&&!usedFallback)return 'Outside the territory';
+  if(!c.avail)return 'Skipped: out of office';
+  if(c.room<=0)return 'Skipped: no room left';
+  return 'Skipped: another rep has more room';
+}
+function route(){
+  var load={},i=0,out=[];
+  REPS.forEach(function(r){load[r.id]=r.open});
+  LEADS.forEach(function(l){
+    var owner=null,why='',usedFallback=false;
+    var cands=REPS.map(function(r){return {rep:r,inTerr:r.region===l.region,avail:available(r),room:S.cap-load[r.id]}});
+    var sameRegion=REPS.filter(function(r){return r.region===l.region});
+    if(S.rule==='territory'){
+      owner=sameRegion[0]||null;
+      why=owner?'Entry "Region equals '+l.region+'" matched first, so '+owner.name+' owns it.':'No entry matches '+l.region+', so the catch-all sends it to the lead queue.';
+    }else if(S.rule==='robin'){
+      owner=REPS[i%REPS.length];i++;
+      why='Next owner in the rotation, whatever the region.';
+    }else{
+      owner=mostRoom(sameRegion,load);
+      if(owner){why='Available rep in '+l.region+' with the most room.'}
+      else if(S.rule==='fallback'){
+        owner=mostRoom(REPS,load);usedFallback=!!owner;
+        why=owner?'Nobody in '+l.region+' qualified, so it goes to the available rep with the most room.':'The whole team is out or full, so it waits in the queue.';
+      }else{
+        why=sameRegion.length?'Everyone in '+l.region+' is out or full, so it waits in the queue.':'No rep covers '+l.region+', so it waits in the queue.';
+      }
+    }
+    var status='none',note='';
+    if(owner){
+      load[owner.id]++;
+      if(!available(owner)){status='stuck';note=' Owner is out of office.'}
+      else if(load[owner.id]>S.cap){status='stuck';note=' Owner is over the limit.'}
+      else{status='ready'}
+    }
+    var trace=cands.map(function(c){return {rep:c.rep,inTerr:c.inTerr,avail:c.avail,room:Math.max(0,c.room),picked:!!owner&&owner.id===c.rep.id,text:verdict(c,owner,usedFallback)}});
+    out.push({lead:l,owner:owner,status:status,why:why+note,trace:trace});
+  });
+  return {rows:out,load:load};
+}
+
+function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+function hl(parent,text){
+  var q=S.q.trim().toLowerCase();
+  if(!q){parent.appendChild(document.createTextNode(text));return parent}
+  var low=text.toLowerCase(),pos=0,idx;
+  while((idx=low.indexOf(q,pos))!==-1){
+    if(idx>pos)parent.appendChild(document.createTextNode(text.slice(pos,idx)));
+    parent.appendChild(el('mark','',text.slice(idx,idx+q.length)));pos=idx+q.length;
+  }
+  if(pos<text.length)parent.appendChild(document.createTextNode(text.slice(pos)));
+  return parent;
+}
+var STATLAB={ready:'Ready',stuck:'Owner cannot act',none:'No owner'};
+function ownerName(r){return r.owner?r.owner.name:'Lead Queue'}
+function haystack(r){return [r.lead.name,r.lead.co,r.lead.region,r.lead.hot?'Hot':'Warm',ownerName(r),STATLAB[r.status]].join(' ').toLowerCase()}
+function inTab(r){
+  if(S.tab==='hot')return r.lead.hot;
+  if(S.tab==='attention')return r.status!=='ready';
+  if(S.tab==='none')return r.status==='none';
+  return true;
+}
+function cmp(a,b){
+  var k=S.sort.k,v;
+  if(k==='name')v=a.lead.name.localeCompare(b.lead.name);
+  else if(k==='co')v=a.lead.co.localeCompare(b.lead.co);
+  else if(k==='region')v=a.lead.region.localeCompare(b.lead.region);
+  else if(k==='rate')v=(b.lead.hot?1:0)-(a.lead.hot?1:0);
+  else if(k==='owner')v=ownerName(a).localeCompare(ownerName(b));
+  else {var o={ready:0,stuck:1,none:2};v=o[a.status]-o[b.status]}
+  return S.sort.d==='desc'?-v:v;
+}
+
+function renderRules(){
+  var box=$('rules'),had=document.activeElement&&document.activeElement.name==='rule'?document.activeElement.value:null;
+  box.textContent='';
+  RULES.forEach(function(r){
+    var lab=el('label','sf-opt'+(S.rule===r.id?' on':''));
+    var inp=document.createElement('input');inp.type='radio';inp.name='rule';inp.value=r.id;inp.checked=S.rule===r.id;
+    inp.addEventListener('change',function(){S.rule=r.id;render()});
+    var t=el('span','');t.appendChild(document.createTextNode(r.label));t.appendChild(el('small','',r.tag));
+    lab.appendChild(inp);lab.appendChild(t);box.appendChild(lab);
+    if(had===r.id)inp.focus();
+  });
+}
+
+function render(){
+  renderRules();
+  $('capv').textContent=S.cap;$('cap').value=S.cap;$('ooo').checked=S.ooo;
+  if($('q').value!==S.q)$('q').value=S.q;
+  var rule=RULES.filter(function(r){return r.id===S.rule})[0];
+  var res=route(),rows=res.rows;
+  var hot=rows.filter(function(r){return r.lead.hot}),hotReady=hot.filter(function(r){return r.status==='ready'}).length;
+  var stuck=rows.filter(function(r){return r.status==='stuck'}).length;
+  var none=rows.filter(function(r){return r.status==='none'}).length;
+  var over=REPS.filter(function(r){return res.load[r.id]>S.cap}).length;
+  var counts={all:rows.length,hot:hot.length,attention:stuck+none,none:none};
+
+  /* highlights panel */
+  var h=$('hl');h.textContent='';
+  [['Hot leads ready',hotReady+' of '+hot.length,hotReady===hot.length?'good':'bad'],['No owner',String(none),none?'bad':'good'],['Reps over limit',String(over),over?'bad':'good']].forEach(function(x){
+    var d=el('div','');d.appendChild(el('small','',x[0]));d.appendChild(el('b',x[2],x[1]));h.appendChild(d);
+  });
+
+  /* alert */
+  var al=$('alert'),msg,cls,ic;
+  if(!stuck&&!none){msg='Every lead reaches a rep who can act on it. Lower the limit or send Bianca out of office to see where this rule breaks.';cls='ok';ic='✓'}
+  else{
+    var parts=[];
+    if(none)parts.push(none+(none===1?' lead has':' leads have')+' no owner and sits in the queue');
+    if(stuck)parts.push(stuck+(stuck===1?' lead is':' leads are')+' owned by a rep who is out or over the limit');
+    msg=parts.join(', and ')+'. '+(hot.length-hotReady)+' of '+hot.length+' Hot leads are not in front of someone who can act.';
+    cls=(hot.length-hotReady)>0?'err':'warn';ic='!';
+  }
+  al.className='sf-alert '+cls;al.textContent='';
+  var b=el('b','');b.appendChild(el('i','',ic));al.appendChild(b);al.appendChild(el('span','',msg));
+  var how=$('how');how.textContent='';how.appendChild(el('em','',rule.tag));how.appendChild(document.createTextNode(rule.how));
+
+  /* tabs */
+  var tb=$('tabs');tb.textContent='';
+  TABS.forEach(function(t,i){
+    var bt=el('button','sf-tab',t.label);bt.type='button';bt.setAttribute('role','tab');
+    bt.setAttribute('aria-selected',S.tab===t.id?'true':'false');bt.tabIndex=S.tab===t.id?0:-1;bt.dataset.tab=t.id;
+    bt.appendChild(el('span','',String(counts[t.id])));
+    bt.addEventListener('click',function(){S.tab=t.id;lastFocus={tab:t.id};render()});
+    bt.addEventListener('keydown',function(e){
+      var n=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!n)return;
+      e.preventDefault();var nt=TABS[(i+n+TABS.length)%TABS.length];S.tab=nt.id;lastFocus={tab:nt.id};render();
+    });
+    tb.appendChild(bt);
+  });
+
+  /* filter pills */
+  var fb=$('fbar');fb.textContent='';
+  function pill(label,fn){var p=el('button','sf-pill',label);p.type='button';p.setAttribute('aria-label','Remove filter '+label);p.appendChild(el('i','','×'));p.addEventListener('click',fn);fb.appendChild(p)}
+  if(S.ownerF){var rn=REPS.filter(function(r){return r.id===S.ownerF})[0].name;pill('Lead Owner: '+rn,function(){S.ownerF=null;render()})}
+  if(S.q.trim())pill('Search: '+S.q.trim(),function(){S.q='';render();$('q').focus()});
+
+  /* column headers (sort) */
+  var th=$('th');th.textContent='';
+  COLS.forEach(function(c){
+    var bt=el('button','',c.l);bt.type='button';
+    var dir=S.sort&&S.sort.k===c.k?S.sort.d:null;
+    if(dir)bt.dataset.dir=dir;
+    bt.setAttribute('aria-label','Sort by '+c.l+', '+(dir==='asc'?'ascending':dir==='desc'?'descending':'not sorted'));
+    bt.addEventListener('click',function(){
+      if(!S.sort||S.sort.k!==c.k)S.sort={k:c.k,d:'asc'};else if(S.sort.d==='asc')S.sort={k:c.k,d:'desc'};else S.sort=null;
+      lastFocus={col:c.k};render();
+    });
+    th.appendChild(bt);
+  });
+
+  /* rows */
+  var vis=rows.filter(function(r){
+    if(!inTab(r))return false;
+    if(S.ownerF&&!(r.owner&&r.owner.id===S.ownerF))return false;
+    if(S.q.trim()&&haystack(r).indexOf(S.q.trim().toLowerCase())===-1)return false;
+    return true;
+  });
+  if(S.sort)vis=vis.slice().sort(cmp);
+  var filt=[];if(S.tab!=='all')filt.push(TABS.filter(function(t){return t.id===S.tab})[0].label);
+  if(S.ownerF)filt.push('owner');if(S.q.trim())filt.push('search');
+  $('sum').textContent=vis.length+' of '+rows.length+' items | '+(S.sort?'Sorted by '+COLS.filter(function(c){return c.k===S.sort.k})[0].l+' ('+(S.sort.d==='asc'?'ascending':'descending')+')':'Sorted by Created Date')+(filt.length?' | Filtered by '+filt.join(', '):'');
+  var ul=$('list');ul.textContent='';
+  if(!vis.length){
+    var em=el('li','sf-tr sf-empty','No leads match the current filters. Clear the search or pick another tab.');em.setAttribute('role','presentation');ul.appendChild(em);
+  }
+  vis.forEach(function(r){
+    var li=el('li','sf-tr');li.setAttribute('role','option');li.tabIndex=0;li.dataset.name=r.lead.name;
+    li.setAttribute('aria-selected',S.sel===r.lead.name?'true':'false');
+    var c1=el('div','sf-cell sf-c-name');c1.appendChild(hl(el('span','sf-link'),r.lead.name));
+    var c2=el('div','sf-cell sf-co sf-c-co');hl(c2,r.lead.co);
+    var c3=el('div','sf-cell sf-c-reg');hl(c3,r.lead.region);
+    var c4=el('div','sf-cell sf-c-rate');c4.appendChild(hl(el('span',r.lead.hot?'sf-hot':'sf-warm'),r.lead.hot?'Hot':'Warm'));
+    var c5=el('div','sf-cell sf-c-own');var own=el('div','sf-own');
+    own.appendChild(el('span','sf-av'+(r.owner?'':' q'),r.owner?r.owner.name.charAt(0):'Q'));
+    own.appendChild(hl(el('span','sf-link'),ownerName(r)));c5.appendChild(own);
+    var c6=el('div','sf-cell sf-c-stat');c6.appendChild(hl(el('span','sf-badge '+r.status),STATLAB[r.status]));
+    li.appendChild(c1);li.appendChild(c2);li.appendChild(c3);li.appendChild(c4);li.appendChild(c5);li.appendChild(c6);
+    li.appendChild(el('p','sf-why',r.why));
+    function pick(){S.sel=r.lead.name;lastFocus={row:r.lead.name};render()}
+    li.addEventListener('click',pick);
+    li.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();pick()}
+      else if(e.key==='ArrowDown'&&li.nextElementSibling){e.preventDefault();li.nextElementSibling.focus()}
+      else if(e.key==='ArrowUp'&&li.previousElementSibling){e.preventDefault();li.previousElementSibling.focus()}
+    });
+    ul.appendChild(li);
+  });
+
+  /* detail */
+  var dt=$('detail');dt.textContent='';
+  var sel=rows.filter(function(r){return r.lead.name===S.sel})[0];
+  var ch=el('div','sf-ch');ch.appendChild(el('i',''));ch.lastChild.setAttribute('aria-hidden','true');
+  ch.appendChild(document.createTextNode(sel?'Selected lead: '+sel.lead.name:'Selected lead'));dt.appendChild(ch);
+  var cb=el('div','sf-cb');
+  if(!sel){cb.appendChild(el('p','sf-how','Select a lead in the list to see how the rule chose its owner.'));cb.firstChild.style.margin='0'}
+  else{
+    var kv=el('div','sf-kv');
+    [['Company',sel.lead.co],['Region',sel.lead.region],['Rating',sel.lead.hot?'Hot':'Warm'],['Lead Owner',ownerName(sel)],['Routing result',STATLAB[sel.status]],['Rule',rule.label]].forEach(function(p){
+      var d=el('div','');d.appendChild(el('small','',p[0]));d.appendChild(el('span','',p[1]));kv.appendChild(d);
+    });
+    cb.appendChild(kv);
+    cb.appendChild(el('p','sf-how',sel.why));cb.lastChild.style.margin='0 0 4px';
+    cb.appendChild(el('div','sf-sub','Decision trace (illustrative)'));
+    var tr=el('div','sf-trace');
+    sel.trace.forEach(function(t){
+      var s=el('div','sf-step'+(t.picked?' pick':''));
+      s.appendChild(el('b','',t.rep.name));
+      s.appendChild(el('span','',t.text));
+      s.appendChild(el('small','','Territory: '+(t.inTerr?'yes':'no')+' | Available: '+(t.avail?'yes':'no')+' | Open slots: '+t.room));
+      tr.appendChild(s);
+    });
+    cb.appendChild(tr);
+  }
+  dt.appendChild(cb);
+
+  /* rep workload (click to filter) */
+  var rp=$('reps');rp.textContent='';
+  REPS.forEach(function(r){
+    var load=res.load[r.id],added=load-r.open;
+    var slots=Math.max(S.cap,load);
+    var withinNew=Math.max(0,Math.min(load,S.cap)-r.open);
+    var overNew=Math.max(0,load-Math.max(S.cap,r.open));
+    var openShown=Math.min(r.open,slots);
+    var btn=el('button','sf-rbtn');btn.type='button';btn.setAttribute('aria-pressed',S.ownerF===r.id?'true':'false');
+    var row=el('div','sf-rr');
+    row.appendChild(el('span','',r.name+' | '+r.region+(available(r)?'':' | out')));
+    row.appendChild(el('b','',load+' of '+S.cap));
+    btn.appendChild(row);
+    var bar=el('div','sf-bar');bar.setAttribute('role','img');
+    bar.setAttribute('aria-label',r.name+' holds '+load+' open leads, limit '+S.cap+', '+added+' new.');
+    function seg(c,n){if(n>0){var s=el('div',c);s.style.width=(n/slots*100)+'%';bar.appendChild(s)}}
+    seg('sf-s-open',openShown);seg('sf-s-new',withinNew);seg('sf-s-over',overNew);
+    var m=el('div','sf-lim');m.style.left=(S.cap/slots*100)+'%';bar.appendChild(m);
+    btn.appendChild(bar);
+    btn.addEventListener('click',function(){S.ownerF=S.ownerF===r.id?null:r.id;lastFocus={rep:r.id};render()});
+    rp.appendChild(btn);
+  });
+
+  /* restore focus after re-render */
+  if(lastFocus){
+    var t=null;
+    if(lastFocus.row)t=document.querySelector('.sf-tr[data-name="'+lastFocus.row+'"]');
+    else if(lastFocus.tab)t=document.querySelector('.sf-tab[data-tab="'+lastFocus.tab+'"]');
+    else if(lastFocus.col){var i=COLS.map(function(c){return c.k}).indexOf(lastFocus.col);t=$('th').children[i]}
+    else if(lastFocus.rep){var j=REPS.map(function(r){return r.id}).indexOf(lastFocus.rep);t=$('reps').children[j]}
+    if(t)t.focus();lastFocus=null;
+  }
+}
+$('cap').addEventListener('input',function(e){S.cap=parseInt(e.target.value,10);render()});
+$('ooo').addEventListener('change',function(e){S.ooo=e.target.checked;render()});
+$('q').addEventListener('input',function(e){S.q=e.target.value;render()});
+$('reset').addEventListener('click',function(){resetState();render()});
+document.addEventListener('keydown',function(e){
+  var tag=(e.target.tagName||'').toLowerCase();
+  if(e.key==='/'&&tag!=='input'&&tag!=='textarea'){e.preventDefault();$('q').focus()}
+});
+render();
+})();
+</script>
+</body>
+</html>

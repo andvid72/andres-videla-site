@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce CPQ: Quote Line Editor Demo | Andres Videla</title>
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://andres-videla.com/demo/quote-editor/">
+<link rel="canonical" href="https://andres-videla.com/demo/quote-editor/">
+<meta property="og:title" content="Salesforce CPQ: Quote Line Editor Demo">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="An interactive CPQ quote editor with fictional data: products, approvals and a simulated co-pilot.">
+<meta property="og:image" content="https://andres-videla.com/assets/quote-editor-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+
+<meta name="description" content="An interactive demo with fictional data: drag products into a quote, remove them, and see simulated approvals and a simulated co-pilot.">
+<meta name="author" content="Andres Videla">
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#fff; --ink:#1f2933; --muted:#6b7785; --line:#dfe4ea;
+  --brand:#2f5bea; --brand-ink:#fff; --ok:#1a8f5a; --warn:#b26a00; --bad:#c0392b;
+  --soft:#eaf0ff; --chip:#eef1f5;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#14181d; --panel:#1c2229; --ink:#e6eaf0; --muted:#97a3b1; --line:#2d3641; --soft:#1f2c4d; --chip:#262e38;color-scheme:dark}
+}
+:root[data-theme="dark"]{--bg:#14181d; --panel:#1c2229; --ink:#e6eaf0; --muted:#97a3b1; --line:#2d3641; --soft:#1f2c4d; --chip:#262e38;color-scheme:dark}
+*{box-sizing:border-box}
+body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+button,select,input{font:inherit;color:inherit}
+.banner{background:#fff4d6;color:#6a4b00;padding:6px 16px;font-size:12px;border-bottom:1px solid #ecd9a0;text-align:center}
+@media (prefers-color-scheme:dark){.banner{background:#3a2f12;color:#f0d9a0;border-color:#5a4a1e}}
+header.app{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header.app h1{font-size:15px;margin:0;font-weight:650}
+header.app .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:6px;cursor:pointer}
+.btn:hover{background:var(--chip)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:3px 8px;font-size:12px}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;background:var(--chip);color:var(--muted)}
+.pill.ok{background:#dff5ea;color:var(--ok)} .pill.warn{background:#fff0d6;color:var(--warn)} .pill.bad{background:#fde3e0;color:var(--bad)}
+
+
+/* editor */
+#editor{display:none}
+.topbar{display:flex;gap:8px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.topbar .nav{padding:5px 12px;border-radius:6px;color:#fff;font-size:12px;cursor:default}
+.n1{background:#374151}.n2{background:#0f8b7d}.n3{background:#a35a12}.n4{background:#5b44c7}
+.topbar .sp{flex:1}
+.grid{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:0;min-height:calc(100vh - 120px)}
+.col{background:var(--panel);border-right:1px solid var(--line);padding:14px;overflow:auto}
+.col:last-child{border-right:0}
+h3{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:650;display:flex;justify-content:space-between;align-items:center}
+.search{width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);margin-bottom:10px}
+.filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.chipbtn{border:1px solid var(--line);background:var(--chip);border-radius:99px;padding:2px 10px;font-size:12px;cursor:pointer}
+.chipbtn.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+.prod{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;cursor:grab;background:var(--panel)}
+.prod:active{cursor:grabbing}
+.prod:hover{border-color:var(--brand)}
+.prod .nm{font-weight:600}
+.prod .sku{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted)}
+.prod .sp{flex:1}
+.prod .pr{font-family:ui-monospace,Menlo,monospace;font-weight:600}
+.drop{border:2px dashed transparent;border-radius:8px;transition:.15s}
+.drop.over{border-color:var(--brand);background:var(--soft)}
+.qi{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.qi label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:3px}
+.qi select,.qi input[type=date]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.step{display:flex;gap:4px}
+.step button{width:30px}
+.step input{width:60px;text-align:center;padding:6px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 6px;border-bottom:1px solid var(--line);font-weight:650}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right;font-family:ui-monospace,Menlo,monospace;vertical-align:middle}
+td:first-child{font-family:inherit}
+tr.line{cursor:grab}
+tr.line:hover{background:var(--chip)}
+td input{width:62px;padding:3px 5px;border:1px solid var(--line);border-radius:5px;text-align:right;background:var(--panel)}
+.empty{padding:34px 10px;text-align:center;color:var(--muted)}
+.totals{display:flex;gap:18px;flex-wrap:wrap;padding:12px 6px;font-size:12px;color:var(--muted);align-items:baseline}
+.totals b{color:var(--ink);font-family:ui-monospace,Menlo,monospace}
+.totals .net{margin-left:auto;font-size:12px}
+.totals .net b{font-size:20px}
+.xbtn{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;line-height:1}
+.xbtn:hover{color:var(--bad)}
+.sumgrid{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:8px;margin-bottom:14px}
+.sumgrid div{padding:8px 10px;border-bottom:1px solid var(--line)}
+.sumgrid div:nth-child(odd){border-right:1px solid var(--line)}
+.sumgrid div:nth-last-child(-n+2){border-bottom:0}
+.sumgrid small{display:block;color:var(--muted);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.sumgrid span{font-weight:650;font-family:ui-monospace,Menlo,monospace}
+.box{border:1px solid var(--line);border-radius:8px;margin-bottom:14px}
+.box .hd{padding:8px 12px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:650}
+.box .bd{padding:10px 12px}
+.apstep{padding:8px 12px;border-top:1px solid var(--line)}
+.apstep:first-of-type{border-top:0}
+.apstep .who{font-weight:650}
+.apstep .why{color:var(--muted);font-size:12px}
+.apstep details summary{cursor:pointer;color:var(--brand);font-size:12px}
+.apstep ul{margin:4px 0 0 18px;padding:0;font-size:12px;color:var(--muted)}
+.chat{height:230px;overflow:auto;background:var(--chip);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.msg{padding:7px 10px;border-radius:10px;max-width:92%;font-size:13px;white-space:pre-wrap}
+.msg.me{align-self:flex-end;background:var(--brand);color:#fff}
+.msg.ai{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+.suggest{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.askrow{display:flex;gap:6px}
+.askrow input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.note{font-size:11px;color:var(--muted);margin-top:8px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1f2933;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.25s}
+#toast.show{opacity:1}
+@media (max-width:1000px){.grid{grid-template-columns:1fr}.col{border-right:0;border-bottom:1px solid var(--line)}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="banner">Interactive demo. Every name, product and number is invented, and nothing connects to any real system. Reload to reset. <a href="/">Back to home</a></div>
+
+<!-- EDITOR -->
+<section id="editor">
+  <header class="app">
+    <h1 id="qtitle"></h1>
+    <span id="qstatus" class="pill"></span>
+    <span class="sp"></span>
+    <button class="btn" id="exitBtn">Exit</button>
+    <button class="btn ok" id="saveBtn">Save</button>
+    <button class="btn primary" id="submitBtn">Submit for approval</button>
+  </header>
+  <div class="topbar">
+    <span class="nav n1">Account</span><span class="nav n2">Opportunity</span><span class="nav n3">Quote</span><span class="nav n4">Document</span>
+    <span class="sp"></span>
+    <span class="note" id="dirty"></span>
+  </div>
+  <div class="grid">
+    <!-- catalog -->
+    <div class="col" id="catalogCol">
+      <h3>Catalog <span id="ccount" class="pill"></span></h3>
+      <input class="search" id="search" placeholder="Search product or SKU...">
+      <div class="filters" id="filters"></div>
+      <div id="catalog"></div>
+      <p class="note">Drag a product into the quote lines, or press its + button. Drag a line back here to remove it.</p>
+    </div>
+    <!-- lines -->
+    <div class="col">
+      <h3>Quote lines <span id="lcount" class="pill"></span></h3>
+      <div class="qi">
+        <div><label>Start date</label><input type="date" id="start"></div>
+        <div><label>Special discount</label>
+          <select id="special"><option value="0">None</option><option value="5">Partner (5%)</option><option value="10">Strategic (10%)</option></select></div>
+        <div><label>Subscription term (months)</label>
+          <div class="step"><button class="btn" id="tm">-</button><input id="term" type="number" min="1" max="60"><button class="btn" id="tp">+</button></div></div>
+        <div><label>Contract type</label>
+          <select id="ctype"><option>Annual</option><option>Multi-year</option><option>Monthly</option></select></div>
+      </div>
+      <div class="drop" id="dropzone">
+        <table>
+          <thead><tr><th>Product</th><th>Qty</th><th>List</th><th>Disc %</th><th>Net</th><th></th></tr></thead>
+          <tbody id="lines"></tbody>
+        </table>
+        <div class="empty" id="empty" style="display:none">No lines yet. Drag a product here.</div>
+      </div>
+      <div class="totals">
+        <span>LIST <b id="tList"></b></span>
+        <span>DISCOUNT <b id="tDisc"></b></span>
+        <span>ACV <b id="tAcv"></b></span>
+        <span>TCV <b id="tTcv"></b></span>
+        <span class="net">NET TOTAL <b id="tNet"></b></span>
+      </div>
+    </div>
+    <!-- summary -->
+    <div class="col">
+      <h3>Summary</h3>
+      <div class="sumgrid" id="sumgrid"></div>
+
+      <div class="box">
+        <div class="hd">Approvals</div>
+        <div class="bd" id="apsum"></div>
+        <div id="apsteps"></div>
+      </div>
+
+      <div class="box">
+        <div class="hd">Co-pilot (simulated)</div>
+        <div class="bd">
+          <div class="chat" id="chat"></div>
+          <div class="suggest" id="suggest"></div>
+          <div class="askrow"><input id="ask" placeholder="Ask about this quote..."><button class="btn primary" id="send">Send</button></div>
+          <div class="note">Answers are pre-written templates filled from the quote on screen. No model or API is called.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div id="toast"></div>
+
+<script>
+/* ---------- fictional data ---------- */
+const CATALOG=[
+  {sku:'PLAN-STARTER',name:'Starter Plan',cat:'Plans',price:1200,unit:'seat/yr'},
+  {sku:'PLAN-TEAM',name:'Team Plan',cat:'Plans',price:2400,unit:'seat/yr'},
+  {sku:'PLAN-BUSINESS',name:'Business Plan',cat:'Plans',price:4200,unit:'seat/yr'},
+  {sku:'PLAN-ENTERPRISE',name:'Enterprise Plan',cat:'Plans',price:7800,unit:'seat/yr'},
+  {sku:'ADD-SSO',name:'SSO Add-on',cat:'Add-ons',price:900,unit:'org/yr'},
+  {sku:'ADD-AUDIT',name:'Audit Log Add-on',cat:'Add-ons',price:1500,unit:'org/yr'},
+  {sku:'SUP-PRIORITY',name:'Priority Support',cat:'Services',price:6000,unit:'org/yr'},
+  {sku:'SVC-ONBOARD',name:'Onboarding Package',cat:'Services',price:3500,unit:'one-time'}
+];
+const QUOTES=[
+  {id:'Q-1001',account:'Northwind Demo Co',opp:'Expansion FY27',status:'Draft',term:12,special:0,ctype:'Annual',start:'2026-12-01',
+   lines:[{sku:'PLAN-TEAM',qty:40,disc:8},{sku:'ADD-SSO',qty:1,disc:0}],
+   facts:{closed:'false',icp:'Mid-market',prev:'Renewal 2025, 32 seats',cases:'3 open, 1 high priority',contacts:'4 (1 economic buyer)'}},
+  {id:'Q-1002',account:'Harbor Logistics Demo',opp:'New business',status:'Draft',term:36,special:10,ctype:'Multi-year',start:'2027-01-15',
+   lines:[{sku:'PLAN-ENTERPRISE',qty:120,disc:22},{sku:'SUP-PRIORITY',qty:1,disc:5},{sku:'SVC-ONBOARD',qty:1,disc:0}],
+   facts:{closed:'false',icp:'Enterprise',prev:'None, first purchase',cases:'0 open',contacts:'6 (2 technical evaluators)'}},
+  {id:'Q-1003',account:'Pinecrest Studio Demo',opp:'Upgrade to Business',status:'Draft',term:12,special:0,ctype:'Annual',start:'2026-11-20',
+   lines:[{sku:'PLAN-BUSINESS',qty:15,disc:12}],
+   facts:{closed:'false',icp:'SMB',prev:'Starter, 10 seats',cases:'1 open',contacts:'2'}}
+];
+const RULES=[
+  {id:'R1',name:'Line discount above 10%',step:1,test:q=>q.lines.some(l=>l.disc>10),why:q=>'At least one line has a discount above 10%'},
+  {id:'R2',name:'Line discount above 20%',step:2,test:q=>q.lines.some(l=>l.disc>20),why:q=>'At least one line has a discount above 20%'},
+  {id:'R3',name:'Net total above 100,000',step:2,test:q=>net(q)>100000,why:q=>'Net total is '+money(net(q))},
+  {id:'R4',name:'Term longer than 24 months',step:1,test:q=>q.term>24,why:q=>'Term is '+q.term+' months'},
+  {id:'R5',name:'Strategic special discount',step:2,test:q=>q.special>=10,why:q=>'Special discount is '+q.special+'%'},
+  {id:'R6',name:'Quantity above 100 on any line',step:1,test:q=>q.lines.some(l=>l.qty>100),why:q=>'A line has more than 100 units'}
+];
+const APPROVERS={1:'Alex Morgan (Sales Manager)',2:'Sam Rivera (Finance Lead)'};
+const POLICY=[
+ 'Discounts above 10% need manager sign-off. Above 20% they also need Finance.',
+ 'Multi-year terms over 24 months are reviewed by the Sales Manager.',
+ 'Strategic special discounts are reserved for named accounts and always go to Finance.'
+];
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+const prod=sku=>CATALOG.find(p=>p.sku===sku);
+let Q=null, uid=1, dirty=false, filterCat='All';
+const lineList=l=>prod(l.sku).price*l.qty;
+const lineNet=(l,q)=>lineList(l)*(1-l.disc/100)*(1-q.special/100);
+const net=q=>q.lines.reduce((s,l)=>s+lineNet(l,q),0);
+const listTot=q=>q.lines.reduce((s,l)=>s+lineList(l),0);
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}
+function setDirty(v){dirty=v;$('dirty').textContent=v?'Unsaved changes':''}
+
+function openQuote(id){
+  const src=QUOTES.find(q=>q.id===id);
+  Q=JSON.parse(JSON.stringify(src));
+  Q.lines=Q.lines.map(l=>({...l,id:uid++}));
+  Q.approval='none'; chatReset();
+  $('editor').style.display='block';
+  $('qtitle').textContent=Q.id+' · '+Q.account;
+  $('start').value=Q.start; $('special').value=Q.special; $('term').value=Q.term; $('ctype').value=Q.ctype;
+  setDirty(false); render(); window.scrollTo(0,0);
+}
+$('exitBtn').onclick=()=>{ location.href='/'; };
+
+/* ---------- catalog ---------- */
+function renderFilters(){
+  const cats=['All',...new Set(CATALOG.map(p=>p.cat))];
+  $('filters').innerHTML=cats.map(c=>`<button class="chipbtn ${c===filterCat?'on':''}" data-c="${c}">${c}</button>`).join('');
+  $('filters').querySelectorAll('button').forEach(b=>b.onclick=()=>{filterCat=b.dataset.c;renderFilters();renderCatalog()});
+}
+function renderCatalog(){
+  const s=$('search').value.toLowerCase();
+  const items=CATALOG.filter(p=>(filterCat==='All'||p.cat===filterCat)&&(p.name+p.sku).toLowerCase().includes(s));
+  $('ccount').textContent=items.length;
+  $('catalog').innerHTML=items.map(p=>{
+    const on=Q&&Q.lines.some(l=>l.sku===p.sku);
+    return `<div class="prod" draggable="true" data-sku="${p.sku}">
+      <div class="sp"><div class="nm">${p.name}</div><div class="sku">${p.sku}</div></div>
+      ${on?'<span class="pill ok">On quote</span>':''}
+      <span class="pr">${money(p.price)}</span><button class="btn sm add" data-sku="${p.sku}" title="Add to quote">+</button></div>`}).join('')||'<div class="empty">No matches</div>';
+  $('catalog').querySelectorAll('.prod').forEach(el=>{
+    el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','add:'+el.dataset.sku);e.dataTransfer.effectAllowed='copy'});
+  });
+  $('catalog').querySelectorAll('.add').forEach(b=>b.onclick=()=>addLine(b.dataset.sku));
+}
+$('search').oninput=renderCatalog;
+
+/* ---------- lines ---------- */
+function addLine(sku){
+  const ex=Q.lines.find(l=>l.sku===sku);
+  if(ex){ex.qty++;toast(prod(sku).name+': quantity '+ex.qty)}
+  else{Q.lines.push({id:uid++,sku,qty:1,disc:0});toast('Added '+prod(sku).name)}
+  changed();
+}
+function removeLine(id){
+  const l=Q.lines.find(x=>x.id==id); if(!l)return;
+  Q.lines=Q.lines.filter(x=>x.id!=id); toast('Removed '+prod(l.sku).name); changed();
+}
+function changed(){ if(Q.approval!=='none'){Q.approval='none';toast('Edited after submit: approval recalled')} setDirty(true); render(); }
+function renderLines(){
+  $('lcount').textContent=Q.lines.length+' lines';
+  $('empty').style.display=Q.lines.length?'none':'block';
+  $('lines').innerHTML=Q.lines.map(l=>{const p=prod(l.sku);return `<tr class="line" draggable="true" data-id="${l.id}">
+    <td><b>${p.name}</b><br><span class="pill">${p.sku}</span></td>
+    <td><input type="number" min="1" value="${l.qty}" data-f="qty" data-id="${l.id}"></td>
+    <td>${money(lineList(l))}</td>
+    <td><input type="number" min="0" max="60" value="${l.disc}" data-f="disc" data-id="${l.id}"></td>
+    <td>${money(lineNet(l,Q))}</td>
+    <td><button class="xbtn" data-id="${l.id}" title="Remove">&times;</button></td></tr>`}).join('');
+  $('lines').querySelectorAll('tr.line').forEach(tr=>tr.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain','rm:'+tr.dataset.id);e.dataTransfer.effectAllowed='move'}));
+  $('lines').querySelectorAll('input').forEach(i=>i.onchange=()=>{
+    const l=Q.lines.find(x=>x.id==i.dataset.id); let v=Math.max(i.dataset.f==='qty'?1:0,parseFloat(i.value)||0);
+    if(i.dataset.f==='disc')v=Math.min(v,60); l[i.dataset.f]=v; changed();
+  });
+  $('lines').querySelectorAll('.xbtn').forEach(b=>b.onclick=()=>removeLine(b.dataset.id));
+}
+/* drop zones: add into lines, remove by dropping on catalog */
+function dz(el,fn){
+  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('over')});
+  el.addEventListener('dragleave',()=>el.classList.remove('over'));
+  el.addEventListener('drop',e=>{e.preventDefault();el.classList.remove('over');fn(e.dataTransfer.getData('text/plain'))});
+}
+dz($('dropzone'),d=>{if(d.startsWith('add:'))addLine(d.slice(4))});
+dz($('catalogCol'),d=>{if(d.startsWith('rm:'))removeLine(d.slice(3))});
+
+/* header fields */
+$('special').onchange=e=>{Q.special=+e.target.value;changed()};
+$('ctype').onchange=e=>{Q.ctype=e.target.value;changed()};
+$('start').onchange=e=>{Q.start=e.target.value;changed()};
+$('term').onchange=e=>{Q.term=Math.min(60,Math.max(1,+e.target.value||12));$('term').value=Q.term;changed()};
+$('tm').onclick=()=>{Q.term=Math.max(1,Q.term-1);$('term').value=Q.term;changed()};
+$('tp').onclick=()=>{Q.term=Math.min(60,Q.term+1);$('term').value=Q.term;changed()};
+
+/* ---------- totals / summary ---------- */
+function renderTotals(){
+  const L=listTot(Q),N=net(Q),d=L?(1-N/L)*100:0;
+  $('tList').textContent=money(L); $('tDisc').textContent=d.toFixed(1)+'%';
+  $('tAcv').textContent=money(N); $('tTcv').textContent=money(N*Q.term/12); $('tNet').textContent=money(N);
+  const f=Q.facts;
+  $('sumgrid').innerHTML=[['Account',Q.account],['Opportunity',Q.opp],['Closed',f.closed],['ICP segment',f.icp],['Quote',Q.id],['Status',statusLabel()]]
+    .map(([k,v])=>`<div><small>${k}</small><span>${v}</span></div>`).join('');
+}
+function statusLabel(){return Q.approval==='pending'?'Pending approval':Q.approval==='approved'?'Approved':'Draft'}
+
+/* ---------- approvals ---------- */
+function evalApprovals(){
+  const hit=RULES.filter(r=>r.test(Q));
+  const steps=[1,2].map(n=>({n,rules:hit.filter(r=>r.step===n)})).filter(s=>s.rules.length);
+  return {hit,steps};
+}
+function renderApprovals(){
+  const {hit,steps}=evalApprovals();
+  const st=$('qstatus'); st.textContent=statusLabel();
+  st.className='pill '+(Q.approval==='pending'?'warn':Q.approval==='approved'?'ok':'');
+  $('apsum').innerHTML=hit.length?`Approval path: <b>${steps.length} step${steps.length>1?'s':''}</b> &middot; ${hit.length} of ${RULES.length} rules apply`:'No approval needed. 0 of '+RULES.length+' rules apply.';
+  $('apsteps').innerHTML=steps.map(s=>`<div class="apstep"><div class="who">Step ${s.n}: ${APPROVERS[s.n]}</div>
+    <details><summary>${s.rules.length} rule${s.rules.length>1?'s':''} &middot; why</summary><ul>${s.rules.map(r=>`<li>${r.name}: ${r.why(Q)}</li>`).join('')}</ul></details></div>`).join('');
+  const sb=$('submitBtn');
+  if(Q.approval==='pending'){sb.textContent='Recall approval';sb.disabled=false}
+  else if(Q.approval==='approved'){sb.textContent='Approved';sb.disabled=true}
+  else{sb.textContent=hit.length?'Submit for approval':'Mark as approved';sb.disabled=!Q.lines.length}
+}
+$('submitBtn').onclick=()=>{
+  if(Q.approval==='pending'){Q.approval='none';toast('Approval recalled');render();return}
+  const {hit}=evalApprovals();
+  if(!hit.length){Q.approval='approved';toast('No rules apply: auto-approved (demo)');render();return}
+  Q.approval='pending';toast('Submitted. In the demo nobody receives anything.');render();
+};
+$('saveBtn').onclick=()=>{setDirty(false);toast('Saved (demo: nothing was written anywhere)')};
+
+/* ---------- simulated co-pilot ---------- */
+const PROMPTS=['Review this quote and flag anything unusual','What approvals does it need, and why?','What do I change to avoid an approval?','Which lines have a discount, and how much?','What does the policy say about this discount?','Summarize this account'];
+function chatReset(){$('chat').innerHTML='';say('ai','Hi. Ask me about '+Q.id+' or pick a suggestion. (Simulated answers.)')}
+function say(who,t){const d=document.createElement('div');d.className='msg '+who;d.textContent=t;$('chat').appendChild(d);$('chat').scrollTop=1e6}
+function answer(q){
+  q=q.toLowerCase(); const N=net(Q),L=listTot(Q),{hit,steps}=evalApprovals();
+  const discLines=Q.lines.filter(l=>l.disc>0);
+  if(!Q.lines.length)return 'The quote has no lines yet. Add a product from the catalog and ask again.';
+  if(/avoid|without|skip|prevent/.test(q)){
+    if(!hit.length)return 'Nothing to avoid: no approval rules apply right now.';
+    const tips=[];
+    if(hit.some(r=>r.id==='R2'))tips.push('Bring every line discount to 20% or below to drop the Finance step from R2.');
+    if(hit.some(r=>r.id==='R1'))tips.push('Keep line discounts at 10% or below to clear R1.');
+    if(hit.some(r=>r.id==='R3'))tips.push('Net total is '+money(N)+'. Staying under 100,000 clears R3.');
+    if(hit.some(r=>r.id==='R4'))tips.push('Term is '+Q.term+' months. 24 or fewer clears R4.');
+    if(hit.some(r=>r.id==='R5'))tips.push('Remove the Strategic special discount to clear R5.');
+    if(hit.some(r=>r.id==='R6'))tips.push('A line has over 100 units. Splitting the order is not recommended; just expect manager review (R6).');
+    return 'To reduce approvals:\n- '+tips.join('\n- ');
+  }
+  if(/approv/.test(q))return hit.length?'Approval path has '+steps.length+' step(s):\n'+steps.map(s=>'Step '+s.n+', '+APPROVERS[s.n]+':\n  '+s.rules.map(r=>r.name+' ('+r.why(Q)+')').join('\n  ')).join('\n'):'No approval rules apply to this quote.';
+  if(/policy|notion|process/.test(q))return 'Simulated knowledge-base lookup:\n- '+POLICY.join('\n- ')+'\n\nCurrent quote: highest line discount is '+Math.max(0,...Q.lines.map(l=>l.disc))+'%.';
+  if(/discount|which lines/.test(q))return discLines.length?'Lines with a discount:\n'+discLines.map(l=>'- '+prod(l.sku).name+': '+l.disc+'% off, net '+money(lineNet(l,Q))).join('\n')+'\nSpecial discount: '+Q.special+'%. Blended discount: '+((1-N/L)*100).toFixed(1)+'%.':'No line has a discount.';
+  if(/summar|account|customer/.test(q)){const f=Q.facts;return Q.account+' ('+f.icp+')\nPrevious: '+f.prev+'\nSupport cases: '+f.cases+'\nContacts: '+f.contacts+'\nThis quote: '+Q.lines.length+' lines, net '+money(N)+' over '+Q.term+' months.'}
+  if(/net|total|why/.test(q))return 'List total is '+money(L)+'. After line discounts'+(Q.special?' and the '+Q.special+'% special discount':'')+', net is '+money(N)+' (blended '+((1-N/L)*100).toFixed(1)+'% off).';
+  if(/review|unusual|flag/.test(q)){
+    const f=[];
+    if(Q.lines.some(l=>l.disc>20))f.push('A line discount exceeds 20%.');
+    if(Q.term>24)f.push('Term is '+Q.term+' months.');
+    if(Q.special>=10)f.push('Strategic special discount is applied on top of line discounts.');
+    if(Q.lines.some(l=>l.qty>100))f.push('A line has more than 100 units.');
+    if(!Q.lines.some(l=>prod(l.sku).cat==='Plans'))f.push('There is no plan line, only add-ons or services.');
+    return f.length?'Things worth a second look:\n- '+f.join('\n- '):'Nothing unusual. Discounts and term are within normal ranges.';
+  }
+  return 'I can help with: review, approvals, discounts, totals, policy, or an account summary.';
+}
+function ask(t){if(!t.trim())return;say('me',t);setTimeout(()=>say('ai',answer(t)),350)}
+$('send').onclick=()=>{ask($('ask').value);$('ask').value=''};
+$('ask').onkeydown=e=>{if(e.key==='Enter')$('send').click()};
+$('suggest').innerHTML=PROMPTS.map(p=>`<button class="chipbtn">${p}</button>`).join('');
+$('suggest').querySelectorAll('button').forEach(b=>b.onclick=()=>ask(b.textContent));
+
+/* ---------- main render ---------- */
+function render(){renderLines();renderTotals();renderApprovals();renderCatalog()}
+renderFilters(); openQuote('Q-1002');
+</script>
+</body>
+</html>

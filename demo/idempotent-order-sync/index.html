@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workato and NetSuite: Idempotent Order Sync Replay Demo | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative model of an order sync between Salesforce and NetSuite through Workato, showing how retries, out-of-order delivery and replays create duplicates unless the receiver is idempotent.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://andres-videla.com/demo/idempotent-order-sync/">
+<link rel="canonical" href="https://andres-videla.com/demo/idempotent-order-sync/">
+<meta property="og:title" content="Workato and NetSuite: Idempotent Order Sync Replay Demo">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Inject timeouts and out-of-order delivery into a fictional order sync, then replay it, and watch what a stable key and a version check change.">
+<meta property="og:image" content="https://andres-videla.com/assets/idempotent-order-sync-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.logbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+h3{font-size:16px;margin:0 0 4px}
+.lede{color:var(--muted);max-width:780px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+button{font:inherit;cursor:pointer;color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.tog{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.tog.first{border-top:0}
+.tog input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tog b{display:block;font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:13px;line-height:1.4}
+.ctl{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ctl label{display:block;font-size:14px;font-weight:600}
+.ctl label output{float:right;font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.btn{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);height:36px;line-height:1;padding:0 12px;border-radius:8px;font-size:14px;font-weight:600}
+.btn.alt{border-color:var(--line);background:var(--surface);color:var(--ink);font-weight:400}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.sum{font-size:15px;margin:0 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg)}
+.kpi .n{font-size:22px;overflow-wrap:anywhere;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.ok .n{color:var(--ok)} .kpi.warn .n{color:var(--warn)} .kpi.bad .n{color:var(--bad)}
+.board{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.orow{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.5fr) 86px;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--surface)}
+.orow:last-child{border-bottom:0}
+.orow.head{background:var(--bg);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px}
+.orow .who b{display:block;font-size:14px}
+.orow .who small{display:block;color:var(--muted);font-size:12px}
+.so{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:var(--bg)}
+.pill.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.pill.dup{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
+.pill.stale{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.none{color:var(--muted);font-size:12px}
+.badge{justify-self:end;font-size:12px;font-weight:600;border-radius:6px;padding:3px 8px;text-align:center}
+.badge.ok{background:var(--ok-soft);color:var(--ok)} .badge.bad{background:var(--bad-soft);color:var(--bad)} .badge.warn{background:var(--warn-soft);color:var(--warn)}
+@media (max-width:560px){
+  .orow{grid-template-columns:minmax(0,1fr) auto;gap:6px 8px}
+  .orow.head{display:none}
+  .orow .so{grid-column:1 / -1;grid-row:2}
+}
+.logwrap{margin-top:16px}
+.logbox{border:1px solid var(--line);border-radius:10px;max-height:340px;overflow:auto;background:var(--bg)}
+.logbox ol{list-style:none;margin:0;padding:0}
+.logbox li{padding:8px 10px;border-bottom:1px solid var(--line);border-left:4px solid var(--ok);font-size:13px}
+.logbox li:last-child{border-bottom:0}
+.logbox li b{font-size:13px}
+.logbox li.k-warn{border-left-color:var(--warn)} .logbox li.k-bad{border-left-color:var(--bad)} .logbox li.k-info{border-left-color:var(--accent)} .logbox li.k-head{border-left-color:var(--muted);background:var(--surface);font-weight:600}
+.logbox li span{color:var(--muted)}
+.sec{margin-top:28px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cols .card p{margin:0;color:var(--muted);font-size:14px}
+.cols .card h3{margin-bottom:6px}
+.impact{max-width:780px}
+.impact p{margin:0 0 10px;color:var(--muted)}
+footer{margin-top:32px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:420px){.kpi .n{font-size:22px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Workato and NetSuite: Idempotent Order Sync Replay Demo</h1>
+  <p class="lede">A sync that works on a quiet day can still corrupt revenue records under load. A response is lost after NetSuite has already saved the order, the recipe retries, and a second sales order appears. Inject faults into ten fictional order events, replay the batch, and see what a stable key and a version check change.</p>
+  <div class="notice">Fictional data and a deterministic simulation. Customers, amounts and identifiers are invented, and faults come from a seeded generator so every run is reproducible. The model is illustrative: it shows mechanisms, not the measured behavior of any product or organization.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-c">
+        <h2 id="t-c">Receiver and recipe design</h2>
+        <div class="chips" role="group" aria-label="Scenario">
+          <button class="chip" data-p="naive" aria-pressed="true">Naive recipe</button>
+          <button class="chip" data-p="retry" aria-pressed="false">Retries only</button>
+          <button class="chip" data-p="upsert" aria-pressed="false">Keyed upsert</button>
+          <button class="chip" data-p="full" aria-pressed="false">Full design</button>
+        </div>
+        <label class="tog first"><input type="checkbox" id="idem"><span><b>Stable external key (upsert)</b><small>The sales order is keyed by the Salesforce order ID, so a repeated create becomes an update.</small></span></label>
+        <label class="tog"><input type="checkbox" id="ver"><span><b>Version check</b><small>An update is applied only if its version is newer than the stored one.</small></span></label>
+        <label class="tog"><input type="checkbox" id="dlq"><span><b>Dead-letter queue</b><small>An event that exhausts its retries is parked for replay instead of being dropped.</small></span></label>
+        <div class="ctl">
+          <label for="ret">Retry policy</label>
+          <small>How many times the recipe calls NetSuite again after a timeout.</small>
+          <select id="ret"><option value="0">No retries</option><option value="2">Up to 2 retries</option></select>
+        </div>
+        <div class="ctl">
+          <label for="p">Timeout rate per call <output id="o-p"></output></label>
+          <small>Half of timeouts happen before NetSuite saves the order, half after, when the response is lost.</small>
+          <input type="range" id="p" min="0" max="50" step="5" value="30">
+        </div>
+        <label class="tog" style="margin-top:10px"><input type="checkbox" id="ooo"><span><b>Out-of-order delivery</b><small>Amendments can arrive before the order they amend, or before an earlier amendment.</small></span></label>
+        <div class="ctl">
+          <label for="seed">Fault pattern</label>
+          <small>Each pattern places the faults on different events.</small>
+          <select id="seed"><option value="1">Pattern 1</option><option value="2">Pattern 2</option><option value="3">Pattern 3</option></select>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-r">
+        <h2 id="t-r">NetSuite sales orders after the sync</h2>
+        <div class="acts">
+          <button class="btn" id="b-all" type="button">Replay full batch</button>
+          <button class="btn alt" id="b-dlq" type="button">Replay dead-letter queue</button>
+          <button class="btn alt" id="b-reset" type="button">Reset replays</button>
+        </div>
+        <p class="sum" id="sum" aria-live="polite"></p>
+        <div class="kpis" id="kpis"></div>
+        <div class="board" role="table" aria-label="Sales orders by Salesforce order">
+          <div class="orow head" role="row"><span role="columnheader">Salesforce order and expected state</span><span role="columnheader">Sales orders in NetSuite</span><span role="columnheader" style="justify-self:end">Result</span></div>
+          <div id="orders"></div>
+        </div>
+        <div class="logwrap">
+          <h2>Delivery log</h2>
+          <div class="logbox" id="logbox" tabindex="0" role="region" aria-label="Delivery log, scrollable"><ol id="log"></ol></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <section class="sec" aria-labelledby="t-a">
+    <h2 id="t-a">Architecture applied</h2>
+    <div class="cols">
+      <div class="card"><h3>1. A stable key at the receiver</h3><p>The sender cannot know whether a timed-out call was applied. Only the receiver can make a repeat harmless, by keying the sales order on the Salesforce order ID so a second create resolves to the same record.</p></div>
+      <div class="card"><h3>2. Version fencing for ordering</h3><p>Integration layers do not guarantee order. Carrying a monotonic version on every event, and refusing anything not newer than the stored one, makes late and early arrivals converge on the same final state.</p></div>
+      <div class="card"><h3>3. Bounded retries and a dead-letter path</h3><p>Retries are capped, failures are parked with their payload instead of dropped, and replay becomes a routine operation. Replay is only safe because the first two layers exist.</p></div>
+    </div>
+  </section>
+
+  <section class="sec impact" aria-labelledby="t-i">
+    <h2 id="t-i">Impact</h2>
+    <p>Without a stable key, every recovery action carries risk, so teams hesitate to replay after an incident and orders stay missing longer. With one, replay becomes the standard repair: run it again and the state converges, with no duplicate sales orders to reverse.</p>
+    <p>Retries and dead-letter queues look like reliability features, but on a non-idempotent receiver they multiply the problem. The design question is not how often to retry but whether a repeated message is harmless by construction.</p>
+  </section>
+
+  <footer>Workato, NetSuite and Salesforce are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by any of them.</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var ORDERS={
+    1:{c:"Quillon Foods"}, 2:{c:"Brightwater Mills"}, 3:{c:"Tamarack Optics"}, 4:{c:"Verdant Row"},
+    5:{c:"Sable Harbor Labs"}, 6:{c:"Ironwood Dyes"}, 7:{c:"Larkspur Works"}
+  };
+  var EVENTS=[
+    {id:1,o:1,v:1,a:12000},{id:2,o:2,v:1,a:8400},{id:3,o:3,v:1,a:20000},{id:4,o:2,v:2,a:9600},
+    {id:5,o:4,v:1,a:15000},{id:6,o:5,v:1,a:6000},{id:7,o:4,v:2,a:16500},{id:8,o:6,v:1,a:30000},
+    {id:9,o:4,v:3,a:18000},{id:10,o:7,v:1,a:4800}
+  ];
+  var OOO=[1,3,4,2,5,6,9,7,8,10];
+  var EXPECT={}; EVENTS.forEach(function(e){ if(!EXPECT[e.o]||e.v>EXPECT[e.o].v) EXPECT[e.o]={v:e.v,a:e.a}; });
+  var PRESETS={
+    naive:{idem:0,ver:0,dlq:0,ret:0,p:30,ooo:1},
+    retry:{idem:0,ver:0,dlq:0,ret:2,p:30,ooo:1},
+    upsert:{idem:1,ver:0,dlq:1,ret:2,p:30,ooo:1},
+    full:{idem:1,ver:1,dlq:1,ret:2,p:30,ooo:1}
+  };
+  var actions=[];
+
+  function rng(seed){ var a=seed>>>0; a=(a+0x6D2B79F5)>>>0; var t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }
+  function money(n){return "$"+n.toLocaleString("en-US")}
+  function cfg(){return {idem:$("idem").checked,ver:$("ver").checked,dlq:$("dlq").checked,ret:+$("ret").value,p:+$("p").value/100,ooo:$("ooo").checked,seed:+$("seed").value}}
+
+  function simulate(c){
+    var rows=[], so=0, calls=0, dlq=[], log=[];
+    function find(o){return rows.filter(function(r){return r.o===o})}
+    function apply(e){
+      var ex=find(e.o), r;
+      if(c.idem){
+        if(!ex.length){ rows.push({n:++so,o:e.o,v:e.v,a:e.a}); return {t:"created SO-"+so,k:"ok"}; }
+        r=ex[0];
+        if(c.ver){
+          if(e.v<=r.v) return {t:(e.v===r.v?"ignored, version v"+e.v+" already applied":"ignored, v"+e.v+" is older than stored v"+r.v),k:"info"};
+          r.v=e.v; r.a=e.a; return {t:"updated SO-"+r.n+" to v"+e.v,k:"ok"};
+        }
+        var stale=e.v<r.v; r.v=e.v; r.a=e.a;
+        return stale?{t:"overwrote newer data with older v"+e.v+" on SO-"+r.n,k:"bad"}:{t:"updated SO-"+r.n+" to v"+e.v,k:"ok"};
+      }
+      if(e.v===1){
+        rows.push({n:++so,o:e.o,v:e.v,a:e.a});
+        return ex.length?{t:"created duplicate SO-"+so,k:"bad"}:{t:"created SO-"+so,k:"ok"};
+      }
+      if(!ex.length){ rows.push({n:++so,o:e.o,v:e.v,a:e.a}); return {t:"created SO-"+so+" from an amendment with no order to update",k:"bad"}; }
+      r=ex[0];
+      if(c.ver && e.v<=r.v) return {t:"ignored, v"+e.v+" is not newer than stored v"+r.v,k:"info"};
+      var st=e.v<r.v; r.v=e.v; r.a=e.a;
+      return st?{t:"overwrote newer data with older v"+e.v+" on SO-"+r.n,k:"bad"}:{t:"updated SO-"+r.n+" to v"+e.v,k:"ok"};
+    }
+    function worse(a,b){var w={ok:0,info:1,warn:2,bad:3};return w[b]>w[a]?b:a}
+    function send(e,faults){
+      var segs=[], kind="ok", max=1+c.ret, done=false, att;
+      for(att=1;att<=max&&!done;att++){
+        calls++;
+        var u=faults?rng(c.seed*7919+e.id*131+att*17):1, hit=faults&&u<c.p;
+        var lead=att>1?"Retry "+(att-1)+": ":"";
+        if(!hit){ var r=apply(e); segs.push(lead+r.t); kind=worse(kind,r.k); done=true; }
+        else{
+          var before=rng(c.seed*104729+e.id*37+att*11)<0.5;
+          if(before){ segs.push(lead+"timed out before NetSuite saved it"); kind=worse(kind,"warn"); }
+          else{ var r2=apply(e); segs.push(lead+"timed out after NetSuite saved it ("+r2.t+"), response lost"); kind=worse(kind,r2.k==="ok"?"warn":r2.k); }
+        }
+      }
+      var tail="";
+      if(!done){
+        if(c.dlq){ dlq.push(e); tail="Parked in the dead-letter queue."; kind=worse(kind,"warn"); }
+        else{ tail="Dropped, nothing will resend it."; kind="bad"; }
+      }
+      log.push({k:kind,h:"Event "+e.id+": order "+e.o+" v"+e.v+", "+money(e.a),t:segs.join(". ")+". "+tail});
+    }
+    var seq=(c.ooo?OOO:EVENTS.map(function(e){return e.id}));
+    seq.forEach(function(id){ send(EVENTS[id-1],true); });
+    actions.forEach(function(act){
+      if(act==="all"){
+        log.push({k:"head",h:"Replay full batch in source order",t:""});
+        EVENTS.forEach(function(e){ send(e,false); });
+        dlq=[];
+      }else if(act==="dlq"){
+        log.push({k:"head",h:"Replay dead-letter queue ("+dlq.length+" parked)",t:""});
+        var q=dlq.slice().sort(function(a,b){return a.id-b.id}); dlq=[];
+        q.forEach(function(e){ send(e,false); });
+      }
+    });
+    return {rows:rows,calls:calls,dlq:dlq,log:log};
+  }
+
+  function render(){
+    var c=cfg(), s=simulate(c);
+    $("o-p").textContent=Math.round(c.p*100)+"%";
+    var ok=0,dup=0,miss=0,stale=0,dupVal=0, html="";
+    Object.keys(ORDERS).forEach(function(k){
+      k=+k; var rs=s.rows.filter(function(r){return r.o===k}), ex=EXPECT[k], st, cls;
+      var good=rs.filter(function(r){return r.v===ex.v&&r.a===ex.a});
+      if(!rs.length){miss++;st="Missing";cls="bad"}
+      else if(rs.length>1){dup+=rs.length-1; rs.slice(1).forEach(function(r){dupVal+=r.a}); st="Duplicate";cls="bad"}
+      else if(!good.length){stale++;st="Stale";cls="warn"}
+      else {ok++;st="Correct";cls="ok"}
+      var pills=rs.length?rs.map(function(r){
+        var pc=(rs.length>1)?"dup":(r.v===ex.v&&r.a===ex.a?"ok":"stale");
+        return '<span class="pill '+pc+'">SO-'+r.n+' v'+r.v+' '+money(r.a)+'</span>';
+      }).join(""):'<span class="none">No sales order</span>';
+      html+='<div class="orow" role="row"><span class="who" role="cell"><b>'+ORDERS[k].c+'</b><small>Expected v'+ex.v+', '+money(ex.a)+'</small></span><span class="so" role="cell">'+pills+'</span><span class="badge '+cls+'" role="cell">'+st+'</span></div>';
+    });
+    $("orders").innerHTML=html;
+    $("sum").textContent=ok+" of 7 orders are correct. Duplicates: "+dup+". Missing: "+miss+". Stale: "+stale+". Dead-letter queue: "+s.dlq.length+". NetSuite calls made: "+s.calls+".";
+    $("kpis").innerHTML=
+      '<div class="kpi '+(ok===7?"ok":"warn")+'"><div class="n">'+ok+' / 7</div><div class="l">Orders correct</div></div>'+
+      '<div class="kpi '+(dup?"bad":"ok")+'"><div class="n">'+dup+'</div><div class="l">Duplicate sales orders</div></div>'+
+      '<div class="kpi '+(miss?"bad":"ok")+'"><div class="n">'+miss+'</div><div class="l">Missing orders</div></div>'+
+      '<div class="kpi '+(stale?"warn":"ok")+'"><div class="n">'+stale+'</div><div class="l">Stale orders</div></div>'+
+      '<div class="kpi"><div class="n">'+s.dlq.length+'</div><div class="l">Parked in dead-letter queue</div></div>'+
+      '<div class="kpi '+(dupVal?"bad":"ok")+'"><div class="n">'+money(dupVal)+'</div><div class="l">Duplicate order value</div></div>';
+    $("log").innerHTML=s.log.map(function(l){
+      return '<li class="k-'+l.k+'"><b>'+l.h+'</b>'+(l.t?'<br><span>'+l.t+'</span>':'')+'</li>';
+    }).join("");
+    $("b-dlq").disabled=!s.dlq.length;
+  }
+  function clearChips(){document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")})}
+  function reset(){clearChips();actions=[];render()}
+  function apply(p){
+    $("idem").checked=!!p.idem; $("ver").checked=!!p.ver; $("dlq").checked=!!p.dlq; $("ret").value=String(p.ret); $("p").value=p.p; $("ooo").checked=!!p.ooo;
+    actions=[]; render();
+  }
+  ["idem","ver","dlq","ret","p","ooo","seed"].forEach(function(id){
+    $(id).addEventListener(id==="p"?"input":"change",reset);
+  });
+  document.querySelectorAll(".chip").forEach(function(b){
+    b.addEventListener("click",function(){clearChips();b.setAttribute("aria-pressed","true");apply(PRESETS[b.dataset.p])});
+  });
+  $("b-all").addEventListener("click",function(){actions.push("all");render()});
+  $("b-dlq").addEventListener("click",function(){actions.push("dlq");render()});
+  $("b-reset").addEventListener("click",function(){actions=[];render()});
+  apply(PRESETS.naive);
+})();
+</script>
+</body>
+</html>

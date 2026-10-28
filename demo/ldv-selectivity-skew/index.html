@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce LDV: Query Selectivity and Data Skew Explorer | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative explorer of how table growth turns a fast Salesforce query into a non-selective one, and how parent-record skew concentrates the work of a parallel load on a single record.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Salesforce LDV: Query Selectivity and Data Skew Explorer">
+<meta property="og:url" content="https://andres-videla.com/demo/ldv-selectivity-skew/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Grow a fictional object from sandbox size to production size and watch a query lose its index, then see how much of a parallel load one oversized parent touches.">
+<meta property="og:image" content="https://andres-videla.com/assets/ldv-selectivity-skew-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+h3{font-size:16px;margin:0 0 4px}
+.lede{color:var(--muted);max-width:780px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.5fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.part{margin-top:32px}
+.part>h2.big{font-size:18px;text-transform:none;letter-spacing:0;color:var(--ink);margin:0 0 4px}
+.part>p.sub{color:var(--muted);margin:0 0 14px;max-width:780px;font-size:15px}
+button{font:inherit;cursor:pointer;color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.ctl{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.ctl.first{margin-top:0;padding-top:0;border-top:0}
+.ctl label{display:block;font-size:14px;font-weight:600}
+.ctl label output{float:right;font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+.tog{display:flex;gap:10px;align-items:flex-start;padding:12px 0 0;margin-top:12px;border-top:1px solid var(--line);cursor:pointer}
+.tog input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tog b{display:block;font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:13px;line-height:1.4}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=range]:disabled{opacity:.4}
+.sum{font-size:15px;margin:0 0 12px}
+.plan{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.badge{font-size:13px;font-weight:600;border-radius:6px;padding:4px 10px}
+.badge.ok{background:var(--ok-soft);color:var(--ok)} .badge.bad{background:var(--bad-soft);color:var(--bad)} .badge.warn{background:var(--warn-soft);color:var(--warn)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);min-width:0}
+.kpi .n{font-size:21px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.ok .n{color:var(--ok)} .kpi.warn .n{color:var(--warn)} .kpi.bad .n{color:var(--bad)}
+.chartbox{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--line);stroke-width:1}
+.tx{fill:var(--muted);font-size:11px;font-family:inherit}
+.ln-std{fill:none;stroke:var(--accent);stroke-width:2.2}
+.ln-cus{fill:none;stroke:var(--warn);stroke-width:2.2;stroke-dasharray:6 4}
+.ln-m{fill:none;stroke:var(--bad);stroke-width:2.4}
+.vl{stroke:var(--muted);stroke-width:1;stroke-dasharray:3 3}
+.dot{stroke:var(--surface);stroke-width:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;margin-right:6px;vertical-align:3px}
+.legend i.s{border-color:var(--accent)} .legend i.c{border-color:var(--warn);border-top-style:dashed} .legend i.m{border-color:var(--bad)}
+.why{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.why li{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--bg)}
+.why li.bad{border-left-color:var(--bad)} .why li.ok{border-left-color:var(--ok)} .why li.warn{border-left-color:var(--warn)}
+.why li b{display:block;font-size:14px}
+.bar{height:14px;border-radius:7px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin:4px 0 10px}
+.bar>div{height:100%;background:var(--accent)}
+.bar.bad>div{background:var(--bad)} .bar.warn>div{background:var(--warn)} .bar.ok>div{background:var(--ok)}
+.barl{font-size:13px;color:var(--muted)}
+.callout{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--muted);background:var(--bg);margin-top:12px}
+.section{margin-top:32px}
+pre{margin:8px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);overflow-x:auto;max-width:100%;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
+pre:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.runs h3{margin-top:14px}
+.runs p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cols .card p{margin:0;color:var(--muted);font-size:14px}
+.cols .card h3{margin-bottom:6px}
+.impact{max-width:780px}
+.impact p{margin:0 0 10px;color:var(--muted)}
+footer{margin-top:32px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce LDV: Query Selectivity and Data Skew Explorer</h1>
+  <p class="lede">A query that is instant in a sandbox can become the slowest thing in production, with no code change at all. The table grew, the filter stopped being selective, and a trigger that used to work now fails. Separately, a single parent record with too many children can serialize a parallel data load. Grow a fictional object and see both effects.</p>
+  <div class="notice">Fictional object and illustrative model. Selectivity uses a simplified form of the thresholds Salesforce documents for standard and custom indexes. The real optimizer weighs more factors, so confirm any real query with the query plan tooling in your own org. No timing or performance measurements are used or implied. The skew panel reports properties of the data, such as the share of batches that include the largest parent. It does not predict lock errors, which depend on timing and on what each transaction updates.</div>
+
+  <section class="part" aria-labelledby="p1">
+    <h2 class="big" id="p1">1. Query selectivity</h2>
+    <p class="sub">Pick a filter, grow the table, and see when the optimizer stops using an index.</p>
+    <div class="grid">
+      <div class="stack">
+        <section class="card" aria-labelledby="t-q">
+          <h2 id="t-q">Query</h2>
+          <div class="chips" role="group" aria-label="Filter A">
+            <button class="chip" data-f="date" aria-pressed="true">Date window</button>
+            <button class="chip" data-f="key" aria-pressed="false">Unique key</button>
+            <button class="chip" data-f="region" aria-pressed="false">Region</button>
+            <button class="chip" data-f="status" aria-pressed="false">Status flag</button>
+            <button class="chip" data-f="neg" aria-pressed="false">Negative filter</button>
+            <button class="chip" data-f="wild" aria-pressed="false">Wildcard</button>
+          </div>
+          <div class="ctl first">
+            <label for="N">Rows in the object <output id="o-N"></output></label>
+            <small>From a sandbox-sized copy to a production-sized table.</small>
+            <input type="range" id="N" min="0" max="6" step="1" value="3">
+          </div>
+          <div class="ctl">
+            <label for="S">Share of rows matching filter A <output id="o-S"></output></label>
+            <small id="s-hint">How selective the filter is for your data.</small>
+            <input type="range" id="S" min="0" max="15" step="1" value="5">
+          </div>
+          <div class="ctl">
+            <label for="fb">Second filter, combined with AND</label>
+            <small>The optimizer can use only the most selective indexed filter as its entry point.</small>
+            <select id="fb"></select>
+          </div>
+          <label class="tog"><input type="checkbox" id="cx"><span><b>Custom index on the filtered field</b><small>Applies to fields that can be indexed but are not by default, such as picklists.</small></span></label>
+        </section>
+      </div>
+      <div class="stack">
+        <section class="card" aria-labelledby="t-qr">
+          <h2 id="t-qr">Query plan, simplified</h2>
+          <p class="sum" id="qsum" aria-live="polite"></p>
+          <div class="plan" id="plan"></div>
+          <div class="kpis" id="qk"></div>
+          <div class="chartbox">
+            <svg id="chart" viewBox="0 0 560 260" role="img" aria-labelledby="ch-t ch-d"><title id="ch-t">Selective row limit versus rows matched, as the table grows</title><desc id="ch-d">Log-log chart. Two lines show how many matching rows an index can handle selectively. A third line shows rows matched by filter A as the table grows.</desc><g id="chart-g"></g></svg>
+            <div class="legend"><span><i class="s"></i>Standard index limit</span><span><i class="c"></i>Custom index limit</span><span><i class="m"></i>Rows matched by filter A</span></div>
+          </div>
+          <ul class="why" id="why"></ul>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="part" aria-labelledby="p2">
+    <h2 class="big" id="p2">2. Parent-record skew</h2>
+    <p class="sub">Load child records in parallel batches and see how many batches include the one oversized parent, and what grouping by parent would cost.</p>
+    <div class="grid">
+      <div class="stack">
+        <section class="card" aria-labelledby="t-s">
+          <h2 id="t-s">Load design</h2>
+          <div class="ctl first">
+            <label for="T">Children under the largest parent <output id="o-T"></output></label>
+            <small>The documented skew warning starts above 10,000 children under one parent.</small>
+            <input type="range" id="T" min="0" max="8" step="1" value="5">
+          </div>
+          <div class="ctl">
+            <label for="TOT">Total child rows being loaded</label>
+            <small>All parents together.</small>
+            <select id="TOT"><option value="1000000">1 million</option><option value="5000000" selected>5 million</option><option value="20000000">20 million</option></select>
+          </div>
+          <div class="ctl">
+            <label for="TH">Parallel batches in flight <output id="o-TH"></output></label>
+            <small>Each batch holds 200 child records.</small>
+            <input type="range" id="TH" min="2" max="16" step="1" value="8">
+          </div>
+          <div class="ctl">
+            <label for="SP">Parents sharing the largest parent's load <output id="o-SP"></output></label>
+            <small>Spreading children across placeholder parents divides the skew.</small>
+            <input type="range" id="SP" min="1" max="50" step="1" value="1">
+          </div>
+          <label class="tog"><input type="checkbox" id="GR"><span><b>Group batches by parent</b><small>Children of the same parent go to the same batch stream, so they never contend. That work now runs serially.</small></span></label>
+        </section>
+      </div>
+      <div class="stack">
+        <section class="card" aria-labelledby="t-sr">
+          <h2 id="t-sr">What the data looks like</h2>
+          <p class="sum" id="ssum" aria-live="polite"></p>
+          <div class="kpis" id="sk"></div>
+          <div class="barl" id="b1l"></div>
+          <div class="bar" id="b1"><div></div></div>
+          <div class="barl" id="b2l"></div>
+          <div class="bar" id="b2"><div></div></div>
+          <div class="callout">Ownership skew behaves similarly: when more than 10,000 records are owned by a single user, role or sharing changes can trigger heavy recalculation. The same remedies apply: spread ownership, or avoid a catch-all integration user as the owner of bulk data.</div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="section runs" aria-labelledby="t-run">
+    <h2 id="t-run">Run it in your own org</h2>
+    <div class="card">
+      <p>The model above teaches the idea. In a real org, the source of truth is the platform itself, and the audit is read-only. These are templates: adapt the object and field names, and try them in a sandbox first. They have not been run against any org for this page.</p>
+      <h3>1. Ask the platform whether a query is selective</h3>
+      <p>The REST Query resource accepts an explain parameter and returns the plans the optimizer considered. Read the leading operation type (an index or a table scan), the relative cost (above 1 means the query is not selective), the estimated cardinality and the object's total cardinality.</p>
+      <pre tabindex="0"><code>GET /services/data/v{apiVersion}/query/?explain=
+  SELECT Id FROM Case
+  WHERE Status = 'Open' AND CreatedDate = LAST_N_DAYS:30</code></pre>
+      <h3>2. Find parent-record skew</h3>
+      <p>Count children per parent and keep the parents above the documented warning level of 10,000.</p>
+      <pre tabindex="0"><code>SELECT AccountId, COUNT(Id) children
+FROM Contact
+GROUP BY AccountId
+HAVING COUNT(Id) &gt; 10000
+ORDER BY COUNT(Id) DESC
+LIMIT 20</code></pre>
+      <h3>3. Find ownership skew</h3>
+      <pre tabindex="0"><code>SELECT OwnerId, COUNT(Id) owned
+FROM Case
+GROUP BY OwnerId
+HAVING COUNT(Id) &gt; 10000
+ORDER BY COUNT(Id) DESC
+LIMIT 20</code></pre>
+      <h3>Notes before you rely on the output</h3>
+      <p>Aggregate queries over very large objects can time out. In that case run the same grouping through a Bulk API query, or against a replica of the object in a warehouse using plain SQL. Confirm the current thresholds and limits in Salesforce documentation, because they can change between releases. Treat the result as an input to a design decision: spread the children, group the load by parent, or archive history.</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="t-a">
+    <h2 id="t-a">Architecture applied</h2>
+    <div class="cols">
+      <div class="card"><h3>1. Design filters around selective indexes</h3><p>Choose entry-point filters that stay selective as the table grows, avoid negative operators and leading wildcards on large objects, and request custom indexes deliberately where the data distribution justifies them.</p></div>
+      <div class="card"><h3>2. Re-test as volume changes</h3><p>Selectivity is a property of data, not code. Review the query plan for critical triggers, flows and reports at production-sized volume, and revisit it on a schedule, not only at release.</p></div>
+      <div class="card"><h3>3. Keep the operational table small and parents balanced</h3><p>Archive history to a warehouse or archival store, spread children across parents, group bulk loads by parent, and avoid one catch-all owner. Smaller, balanced data keeps both queries and loads predictable.</p></div>
+    </div>
+  </section>
+
+  <section class="section impact" aria-labelledby="t-i">
+    <h2 id="t-i">Impact</h2>
+    <p>Large-data-volume failures tend to arrive as surprises: a nightly job that began timing out, an integration that started failing on lock errors. Treating selectivity and skew as design properties moves those surprises into design review, where the fix is a filter, an index or a load plan instead of an incident.</p>
+    <p>For revenue systems, the stakes are practical. Quote, order and billing automation often runs in synchronous contexts, so a query that quietly lost its index can slow or block the same quarter-end work the business depends on.</p>
+  </section>
+
+  <footer>Salesforce is a trademark of its respective owner. This page is an independent architecture illustration and is not affiliated with or endorsed by it.</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var NS=[100000,500000,1000000,5000000,20000000,50000000,100000000];
+  var SH=[0.01,0.1,0.5,1,2,3,4,5,10,15,22,30,50,70,85,90];
+  var TOPS=[100,1000,5000,10000,25000,50000,100000,250000,500000];
+  var F={
+    date:{n:"CreatedDate in the last 30 days",ix:"std",sh:3,note:"A standard indexed field."},
+    key:{n:"External ID equals one value",ix:"std",sh:null,note:"External ID fields are indexed, and one value matches one row."},
+    region:{n:"Region equals EMEA",ix:"elig",sh:5,note:"A picklist, not indexed unless a custom index exists."},
+    status:{n:"Status equals Active",ix:"elig",sh:70,note:"A low-cardinality picklist, rarely selective."},
+    neg:{n:"Status does not equal Closed",ix:"never",sh:85,note:"Negative operators prevent index use."},
+    wild:{n:"Name contains a fragment",ix:"never",sh:4,note:"A leading wildcard prevents index use."}
+  };
+  var fa="date";
+  function fmt(n){
+    if(n>=1e6) return (n/1e6).toFixed(n>=1e7?0:1).replace(/\.0$/,"")+"M";
+    if(n>=1e3) return (n/1e3).toFixed(n>=1e5?0:1).replace(/\.0$/,"")+"K";
+    return String(Math.round(n));
+  }
+  function nearest(v){var b=0;SH.forEach(function(x,i){if(Math.abs(x-v)<Math.abs(SH[b]-v))b=i});return b}
+  function pc(P){return P>0.995?">99%":P<0.01?"<1%":Math.round(P*100)+"%"}
+  function stdLim(N){return Math.min(0.3*Math.min(N,1e6)+0.15*Math.max(N-1e6,0),1e6)}
+  function cusLim(N){return Math.min(0.1*Math.min(N,1e6)+0.05*Math.max(N-1e6,0),333333)}
+
+  function evalF(key,share,N,custom){
+    var f=F[key], matches=f.sh===null?1:share/100*N, lim=0, idx="none";
+    if(f.ix==="std"){idx="standard";lim=stdLim(N)}
+    else if(f.ix==="elig"&&custom){idx="custom";lim=cusLim(N)}
+    var sel=idx!=="none"&&matches<lim;
+    return {key:key,f:f,matches:matches,idx:idx,lim:lim,sel:sel};
+  }
+  function buildSel(){
+    var o='<option value="">None</option>';
+    Object.keys(F).forEach(function(k){o+='<option value="'+k+'">'+F[k].n+'</option>'});
+    $("fb").innerHTML=o;
+  }
+
+  function renderQ(){
+    var N=NS[+$("N").value], share=SH[+$("S").value], custom=$("cx").checked, fbk=$("fb").value;
+    $("o-N").textContent=fmt(N)+" rows";
+    var fixed=F[fa].sh===null;
+    $("S").disabled=fixed;
+    $("o-S").textContent=fixed?"One row":share+"%";
+    $("s-hint").textContent=fixed?"A unique key always matches a single row.":"How selective the filter is for your data.";
+    var A=evalF(fa,share,N,custom), cands=[A];
+    var B=null;
+    if(fbk&&fbk!==fa){ B=evalF(fbk,F[fbk].sh===null?0:F[fbk].sh,N,custom); cands.push(B); }
+    var sel=cands.filter(function(c){return c.sel}).sort(function(a,b){return a.matches-b.matches});
+    var scanned=sel.length?sel[0].matches:N;
+    var ret=A.matches*(B?(F[fbk].sh===null?1/Math.max(N,1):F[fbk].sh/100):1);
+    var full=!sel.length, trig=full&&N>200000;
+    $("qsum").textContent=full
+      ? "No filter is both indexed and selective at "+fmt(N)+" rows, so the query reads the whole table: "+fmt(N)+" rows scanned to return about "+(ret<1?"at most 1":fmt(ret))+"."
+      : "The optimizer enters through "+sel[0].f.n+" and scans "+fmt(scanned)+" of "+fmt(N)+" rows, "+(scanned/N*100<0.01?"under 0.01":"about "+(scanned/N*100).toFixed(scanned/N*100<1?2:1))+"% of the table.";
+    $("plan").innerHTML='<span class="badge '+(full?"bad":"ok")+'">'+(full?"Full table scan":"Index scan")+'</span>'+
+      (trig?'<span class="badge bad">Fails in a trigger: non-selective query on an object over 200,000 rows</span>':(full?'<span class="badge warn">Allowed, but reads every row</span>':'<span class="badge ok">Safe entry point</span>'));
+    var pct=scanned/N*100;
+    $("qk").innerHTML=
+      '<div class="kpi"><div class="n">'+fmt(N)+'</div><div class="l">Rows in the object</div></div>'+
+      '<div class="kpi '+(full?"bad":"ok")+'"><div class="n">'+fmt(scanned)+'</div><div class="l">Rows scanned</div></div>'+
+      '<div class="kpi '+(pct>50?"bad":pct>5?"warn":"ok")+'"><div class="n">'+(pct<0.01?"<0.01":pct.toFixed(pct<1?2:1))+'%</div><div class="l">Share of table scanned</div></div>'+
+      '<div class="kpi"><div class="n">'+(ret<1?"At most 1":fmt(ret))+'</div><div class="l">Rows returned</div></div>';
+    $("why").innerHTML=cands.map(function(c,i){
+      var head=(i===0?"Filter A: ":"Filter B: ")+c.f.n;
+      var body, cls;
+      if(c.idx==="none"){ cls="bad"; body=c.f.ix==="elig"?"Not indexed. "+c.f.note+" Turn on the custom index to make it a candidate.":"Not usable as an entry point. "+c.f.note; }
+      else{ cls=c.sel?"ok":"bad";
+        body="Indexed ("+c.idx+"). Matches about "+fmt(c.matches)+" rows against a selective limit of "+fmt(c.lim)+". "+(c.sel?"Selective, so it can drive the plan.":"Not selective, so the optimizer will not use it."); }
+      return '<li class="'+cls+'"><b>'+head+'</b>'+body+'</li>';
+    }).join("");
+    chart(N,A,share);
+  }
+
+  function chart(N,A,share){
+    var W=560,H=260,L=46,R=12,T=12,B=34, pw=W-L-R, ph=H-T-B;
+    var x0=Math.log10(1e5), x1=Math.log10(1e8), y0=0, y1=Math.log10(1e8);
+    var X=function(n){return L+(Math.log10(n)-x0)/(x1-x0)*pw}, Y=function(v){return T+(1-(Math.log10(Math.max(v,1))-y0)/(y1-y0))*ph};
+    var s="";
+    [[0,"1"],[2,"100"],[4,"10K"],[6,"1M"],[8,"100M"]].forEach(function(t){var y=Y(Math.pow(10,t[0]));s+='<line class="ax" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text class="tx" x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+t[1]+'</text>'});
+    [[1e5,"100K"],[1e6,"1M"],[1e7,"10M"],[1e8,"100M"]].forEach(function(t){var x=X(t[0]);s+='<line class="ax" x1="'+x+'" x2="'+x+'" y1="'+T+'" y2="'+(T+ph)+'"/><text class="tx" x="'+x+'" y="'+(H-14)+'" text-anchor="'+(t[0]>=1e8?"end":"middle")+'">'+t[1]+'</text>'});
+    s+='<text class="tx" x="'+(L+pw/2)+'" y="'+(H-1)+'" text-anchor="middle">Rows in the object</text>';
+    var p1=[],p2=[],p3=[],i,n;
+    for(i=0;i<=60;i++){ n=Math.pow(10,x0+(x1-x0)*i/60); p1.push(X(n).toFixed(1)+","+Y(stdLim(n)).toFixed(1)); p2.push(X(n).toFixed(1)+","+Y(cusLim(n)).toFixed(1)); p3.push(X(n).toFixed(1)+","+Y(F[fa].sh===null?1:share/100*n).toFixed(1)); }
+    s+='<polyline class="ln-std" points="'+p1.join(" ")+'"/><polyline class="ln-cus" points="'+p2.join(" ")+'"/><polyline class="ln-m" points="'+p3.join(" ")+'"/>';
+    s+='<line class="vl" x1="'+X(N)+'" x2="'+X(N)+'" y1="'+T+'" y2="'+(T+ph)+'"/>';
+    s+='<circle class="dot" cx="'+X(N)+'" cy="'+Y(A.matches)+'" r="6" fill="'+(A.sel?"var(--ok)":"var(--bad)")+'"/>';
+    $("chart-g").innerHTML=s;
+  }
+
+  function renderS(){
+    var top=TOPS[+$("T").value], tot=+$("TOT").value, th=+$("TH").value, sp=+$("SP").value, grp=$("GR").checked, S=200;
+    $("o-T").textContent=fmt(top); $("o-TH").textContent=th; $("o-SP").textContent=sp===1?"Not spread":sp+" parents";
+    var s0=Math.min(top/tot,1), s=s0/sp;
+    var q=1-Math.pow(1-s,S), inflight=th*q;
+    var speed=1/(s+(1-s)/th);
+    var skewed=top/sp>10000;
+    $("ssum").textContent="The largest parent holds "+(s0*100<0.1?"under 0.1":(s0*100).toFixed(1))+"% of all child rows"+(sp>1?", "+(s*100<0.1?"under 0.1":(s*100).toFixed(1))+"% per parent after spreading":"")+". In randomly composed batches of 200, "+pc(q)+" of batches include at least one of its children, and each of those batches can contend for a lock on that parent. On average "+inflight.toFixed(1)+" of the "+th+" batches in flight include it."+
+      (grp?" Grouping by parent keeps those batches apart, but that parent's rows now run serially, which caps the speedup at "+speed.toFixed(1)+"x of "+th+" possible.":"");
+    $("sk").innerHTML=
+      '<div class="kpi '+(skewed?"bad":"ok")+'"><div class="n">'+(skewed?"Skewed":"Balanced")+'</div><div class="l">'+fmt(top/sp)+' children per largest parent</div></div>'+
+      '<div class="kpi '+(q>0.5?"bad":q>0.1?"warn":"ok")+'"><div class="n">'+pc(q)+'</div><div class="l">Batches that include the largest parent</div></div>'+
+      '<div class="kpi '+(speed<th*0.5?"bad":speed<th*0.9?"warn":"ok")+'"><div class="n">'+speed.toFixed(1)+'x</div><div class="l">Speedup cap if grouped by parent</div></div>';
+    $("b1l").textContent="Share of batches that include the largest parent: "+pc(q);
+    $("b1").className="bar "+(q>0.5?"bad":q>0.1?"warn":"ok"); $("b1").firstElementChild.style.width=Math.max(q*100,1)+"%";
+    $("b2l").textContent="Parallel efficiency if grouped by parent: "+(speed/th*100).toFixed(0)+"% of the "+th+" batches doing useful work";
+    $("b2").className="bar "+(speed<th*0.5?"bad":speed<th*0.9?"warn":"ok"); $("b2").firstElementChild.style.width=Math.max(speed/th*100,1)+"%";
+  }
+
+  function clearChips(){document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")})}
+  buildSel();
+  document.querySelectorAll(".chip").forEach(function(b){
+    b.addEventListener("click",function(){
+      clearChips(); b.setAttribute("aria-pressed","true"); fa=b.dataset.f;
+      if(F[fa].sh!==null) $("S").value=nearest(F[fa].sh);
+      if($("fb").value===fa) $("fb").value="";
+      renderQ();
+    });
+  });
+  ["N","S","cx","fb"].forEach(function(id){
+    $(id).addEventListener(id==="N"||id==="S"?"input":"change",function(){ if(id==="S"){} renderQ(); });
+  });
+  ["T","TOT","TH","SP","GR"].forEach(function(id){
+    $(id).addEventListener(id==="TOT"||id==="GR"?"change":"input",renderS);
+  });
+  $("S").value=nearest(F[fa].sh);
+  renderQ(); renderS();
+})();
+</script>
+</body>
+</html>

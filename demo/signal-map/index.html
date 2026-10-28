@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gong to NetSuite: Call-to-Cash Signal Map | Andres Videla</title>
+<meta name="description" content="An interactive map of how a revenue signal travels from a call to the forecast. Inject failures, deploy controls with drag and drop, and see how reliability compounds across systems.">
+<meta name="author" content="Andres Videla">
+<meta property="og:url" content="https://andres-videla.com/demo/signal-map/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<link rel="canonical" href="https://andres-videla.com/demo/signal-map/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gong to NetSuite: Call-to-Cash Signal Map">
+<meta property="og:description" content="Follow a revenue signal from Gong to the forecast, inject failures at each system and drag controls onto the map to contain them.">
+<meta property="og:image" content="https://andres-videla.com/assets/signal-map-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0; --soft:#f0f1ef;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --pk-ok:#1f9d5c; --pk-warn:#d9922b; --pk-bad:#d6453d;
+  --shadow:0 10px 30px rgba(20,24,32,.18);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37; --soft:#20242b;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+    --pk-ok:#4cd38a; --pk-warn:#f0b050; --pk-bad:#ff7a70; --shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37; --soft:#20242b;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  --pk-ok:#4cd38a; --pk-warn:#f0b050; --pk-bad:#ff7a70; --shadow:0 10px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 16px 64px}
+.back{display:inline-block;margin-bottom:12px;font-size:14px;color:var(--accent)}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:700}
+.lede{color:var(--muted);max-width:800px;margin:0 0 16px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:14px}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:3px 9px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.toolbar .sp{flex:1}
+.hint{font-size:13px;color:var(--muted);margin:0 0 14px;min-height:20px}
+.hint b{color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+
+/* pipeline */
+.pipe{display:flex;align-items:stretch;gap:0}
+.node{flex:0 0 172px;background:var(--surface);border:1.5px solid var(--line);border-top:5px solid var(--nc,var(--pk-ok));border-radius:12px;padding:12px;cursor:pointer;position:relative;transition:box-shadow .15s,border-color .15s,transform .15s}
+.node:hover{box-shadow:0 8px 22px rgba(20,24,32,.14);transform:translateY(-2px)}
+.node.over{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 4px var(--accent-soft)}
+.node.armed{border-style:dashed;border-color:var(--accent)}
+.node.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.node.ok{--nc:var(--pk-ok)} .node.warn{--nc:var(--pk-warn)} .node.bad{--nc:var(--pk-bad)}
+.nh{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+.mono{width:38px;height:38px;border-radius:10px;background:var(--nc);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex:none;transition:background .3s}
+.nn{font-weight:700;font-size:16px;line-height:1.2}
+.nr{font-size:12px;color:var(--muted);line-height:1.3}
+.meter{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:2px 0 10px}
+.meter i{display:block;height:100%;background:var(--nc);border-radius:3px;transition:width .5s,background .3s}
+.fchips{display:flex;flex-direction:column;gap:5px}
+.fchip{display:flex;align-items:center;gap:6px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:4px 7px;font-size:12px;line-height:1.25;transition:background .15s,border-color .15s}
+.fchip:hover{border-color:var(--accent)}
+.fchip .d{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);flex:none}
+.fchip.on{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.fchip.on .d{background:var(--bad);border-color:var(--bad)}
+.fchip.safe{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.fchip.safe .d{background:var(--ok);border-color:var(--ok)}
+.deps{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;min-height:4px}
+.dep{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;background:var(--ok-soft);color:var(--ok);border-radius:999px;padding:1px 4px 1px 8px;animation:pop .22s}
+.dep button{border:0;background:transparent;color:inherit;font-size:14px;line-height:1;padding:0 3px;border-radius:50%}
+.dep button:hover{background:var(--ok);color:#fff}
+@keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
+.lnk{flex:1;min-width:46px;display:flex;flex-direction:column;justify-content:center;align-items:center;position:relative;padding:0 4px}
+.lnk .lab{font-size:11px;color:var(--muted);text-align:center;line-height:1.2;margin-bottom:6px;max-width:110px}
+.track{position:relative;height:4px;width:100%;border-radius:2px;background:var(--lc,var(--pk-ok));opacity:.35;transition:background .4s}
+.pkw{position:relative;height:10px;width:100%;margin-top:-7px}
+.pk{position:absolute;top:0;left:0;width:10px;height:10px;border-radius:50%;background:var(--lc,var(--pk-ok));box-shadow:0 0 0 3px color-mix(in srgb,var(--lc,var(--pk-ok)) 25%,transparent);animation:fly var(--dur,3s) linear infinite;transition:background .4s}
+.lnk.ok{--lc:var(--pk-ok)} .lnk.warn{--lc:var(--pk-warn)} .lnk.bad{--lc:var(--pk-bad)}
+.pk:nth-child(2){animation-delay:calc(var(--dur,3s) / -3)} .pk:nth-child(3){animation-delay:calc(var(--dur,3s) / -1.5)}
+@keyframes fly{from{left:0;opacity:0}8%{opacity:1}92%{opacity:1}to{left:calc(100% - 10px);opacity:0}}
+@keyframes flyY{from{top:0;opacity:0}8%{opacity:1}92%{opacity:1}to{top:calc(100% - 10px);opacity:0}}
+@media (prefers-reduced-motion: reduce){.pk{animation:none;left:calc(50% - 5px)}}
+@media (max-width:1100px){
+  .pipe{flex-direction:column;align-items:stretch}
+  .node{flex:none}
+  .lnk{flex:none;height:74px;flex-direction:row;gap:10px;justify-content:center}
+  .lnk .lab{margin:0;max-width:130px;text-align:right;order:2;text-align:left}
+  .track{width:4px;height:100%;order:1}
+  .pkw{width:10px;height:100%;margin:0 0 0 -7px;order:1}
+  .pk{animation-name:flyY;left:0}
+  .pk:nth-child(n){left:0}
+}
+
+/* lower row */
+.row2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-top:16px;align-items:start}
+@media (max-width:980px){.row2{grid-template-columns:1fr}}
+.tray{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.ctl{display:flex;align-items:flex-start;gap:8px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:8px 10px;cursor:grab;position:relative;transition:box-shadow .12s,transform .12s,border-color .12s}
+.ctl:hover{box-shadow:0 4px 14px rgba(20,24,32,.12);transform:translateY(-1px)}
+.ctl:active{cursor:grabbing}
+.ctl[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),0 0 0 3px var(--accent)}
+.ctl .sh{width:26px;height:26px;border-radius:7px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:none}
+.ctl .t{font-weight:600;font-size:13px;line-height:1.25;padding-right:22px}
+.ctl .s{font-size:12px;color:var(--muted);line-height:1.3;margin-top:2px}
+.ibtn{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:12px;line-height:1;color:var(--muted);padding:0;font-style:italic;font-family:Georgia,serif}
+.ibtn:hover{color:var(--accent);border-color:var(--accent)}
+.gauge{display:flex;align-items:center;gap:16px}
+.gauge svg{width:132px;height:132px;flex:none}
+.gauge .bgc{fill:none;stroke:var(--line);stroke-width:11}
+.gauge .fgc{fill:none;stroke:var(--pk-ok);stroke-width:11;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .7s,stroke .3s}
+.gauge text{font-size:34px;font-weight:800;fill:var(--ink);font-variant-numeric:tabular-nums}
+.band{display:inline-block;border-radius:6px;padding:3px 9px;font-weight:600;font-size:13px}
+.band.ok{background:var(--ok-soft);color:var(--ok)} .band.warn{background:var(--warn-soft);color:var(--warn)} .band.bad{background:var(--bad-soft);color:var(--bad)}
+.gauge p{margin:8px 0 0;font-size:13px;color:var(--muted)}
+.drags{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.drags li{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;background:var(--bg);cursor:pointer}
+.drags li:hover{border-color:var(--accent)}
+.drags .nt{font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--accent-soft);color:var(--accent);margin-right:6px}
+.drags .lo{font-variant-numeric:tabular-nums;color:var(--bad);font-weight:700;flex:none}
+.good{border:1px solid var(--ok);background:var(--ok-soft);color:var(--ok);border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600;margin-top:14px}
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+@media (max-width:760px){.principles{grid-template-columns:1fr}}
+.principles div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.principles b{display:block;margin-bottom:4px}
+.principles p{margin:0;color:var(--muted)}
+footer{margin-top:24px;font-size:13px;color:var(--muted)}
+
+/* modal and toasts */
+.ov{position:fixed;inset:0;background:rgba(10,12,16,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.ov.on{display:flex}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);max-width:600px;width:100%;max-height:88vh;overflow:auto;padding:18px;animation:pop .2s}
+.dlg h3{margin:0 0 4px;font-size:19px}
+.dlg .sub{font-size:13px;color:var(--muted);margin:0 0 10px}
+.dlg h4{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.dlg p{margin:0;font-size:14px}
+.fm{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--bg)}
+.fm.on{border-color:var(--bad)} .fm.safe{border-color:var(--ok)}
+.fm .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.fm b{font-size:14px}
+.fm .x{font-size:13px;color:var(--muted);margin-top:3px}
+.fm .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 6px;white-space:nowrap}
+.tag.on{background:var(--bad-soft);color:var(--bad)} .tag.safe{background:var(--ok-soft);color:var(--ok)} .tag.off{background:var(--soft);color:var(--muted)}
+.dlg .act{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}
+#toasts{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;z-index:60;width:calc(100% - 32px);max-width:480px;pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);border-radius:8px;padding:9px 14px;font-size:14px;box-shadow:var(--shadow);animation:pop .2s;pointer-events:auto}
+.toast.warn{background:var(--warn);color:#fff} .toast.error{background:var(--bad);color:#fff} .toast.ok{background:var(--ok);color:#fff}
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.mwrap{overflow-x:auto;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.mtab{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+.mtab th,.mtab td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.mtab tr:last-child td{border-bottom:0}
+.mtab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Gong to NetSuite: Call-to-Cash Signal Map</h1>
+  <p class="lede">A revenue signal starts on a call and ends in a forecast, crossing five systems. Every hop can degrade it, and upstream problems are amplified by everything downstream. Inject a failure, then drag controls onto the map to contain it.</p>
+  <div class="notice">Illustrative model with fictional failure modes. Weights are chosen to show how reliability compounds across systems and do not describe any real implementation. Gong, Salesforce, NetSuite and the other names are used generically.</div>
+
+  <div class="toolbar" role="group" aria-label="Scenarios and actions">
+    <button class="chip" data-preset="healthy" aria-pressed="false">Healthy flow</button>
+    <button class="chip" data-preset="quarter" aria-pressed="true">Quarter-end crunch</button>
+    <button class="chip" data-preset="sprawl" aria-pressed="false">Fast-growth sprawl</button>
+    <span class="sp"></span>
+    <button class="btn" id="rand">Inject a random failure</button>
+    <button class="btn primary" id="auto">Auto-contain</button>
+    <button class="btn" id="reset">Reset</button>
+  </div>
+  <p class="hint" id="hint"></p>
+
+  <section class="panel" aria-labelledby="t-m">
+    <h2 id="t-m">Signal path</h2>
+    <div class="pipe" id="pipe"></div>
+  </section>
+
+  <div class="row2">
+    <section class="panel" aria-labelledby="t-c">
+      <h2 id="t-c">Controls (drag onto a system)</h2>
+      <div class="tray" id="tray"></div>
+    </section>
+    <section class="panel" aria-labelledby="t-s">
+      <h2 id="t-s">Illustrative signal confidence</h2>
+      <div class="gauge">
+        <svg viewBox="0 0 132 132" aria-hidden="true"><circle class="bgc" cx="66" cy="66" r="57"/><circle class="fgc" id="fg" cx="66" cy="66" r="57" stroke-dasharray="358.1" stroke-dashoffset="358.1"/><text x="66" y="77" text-anchor="middle" id="sc">100</text></svg>
+        <div><span class="band" id="band"></span><p id="bandtxt"></p></div>
+      </div>
+      <ul class="drags" id="drags"></ul>
+    </section>
+  </div>
+
+  <div class="principles">
+    <div><b>Reliability compounds</b><p>A flaw at the first hop touches every system after it. The same defect costs more in Gong than in the forecast, because everything downstream inherits it.</p></div>
+    <div><b>Controls belong where failures live</b><p>A freshness alert on the wrong system protects nothing. Match each control to the failure mode and place it at the hop where that failure can occur.</p></div>
+    <div><b>Contained is not eliminated</b><p>A deployed control reduces a failure but does not remove it. Residual risk is why reconciliation and ownership never end.</p></div>
+  </div>
+
+  <section class="real" aria-labelledby="t-meas"><h2 id="t-meas">Measure each hop</h2><p class="rnote" style="margin:0 0 10px">These indicators are a measurement design, not a verified integration.</p><div class="mwrap"><table class="mtab"><thead><tr><th>Hop</th><th>Indicator to measure</th><th>Source</th></tr></thead><tbody><tr><td>Gong</td><td>Share of expected calls captured, age of the newest processed call</td><td>Gong calls for a date range</td></tr><tr><td>Salesforce</td><td>Completeness of forecast fields, time since the last update</td><td>Record queries and field metadata</td></tr><tr><td>CPQ / RLM</td><td>Share of quotes and orders that agree on contract value</td><td>The organization's quote and order records. Confirm per org.</td></tr><tr><td>NetSuite</td><td>Age of orders in billing after signature, duplicate orders</td><td>The organization's billing records. Confirm per account.</td></tr><tr><td>Forecast</td><td>Age of inputs at commit time</td><td>The forecast tool's records</td></tr></tbody></table></div></section>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid"><div><b>Data sources</b><ul><li>Gong: calls for a date range, including tracker matches in call data.</li><li>Salesforce: records queried through the API, and field metadata from describe.</li><li>CPQ, RLM, NetSuite and the forecast tool: the organization's own records. Their API options and limits are not covered here and must be confirmed per account.</li></ul></div><div><b>Limits and prerequisites</b><ul><li>Gong API credentials are issued by a technical administrator.</li><li>Gong documents default limits of 3 calls per second and 10,000 calls per day for the company.</li><li>Salesforce API requests are pooled per org within a 24-hour period. For Enterprise Edition the allowance is 100,000 plus a per-license amount and any purchased add-ons, and exceeding it returns HTTP 403 REQUEST_LIMIT_EXCEEDED.</li><li>Each additional system brings its own limits, credentials and data model.</li></ul></div><div><b>How it would be validated</b><ul><li>Replace the composite score with measured indicators per hop and look at them separately.</li><li>Calibrate against the organization's own forecast history before trusting any combined number.</li><li>Use the failure modes as a review checklist with the system owners.</li></ul></div></div>
+    <p class="rnote">What this demo does not claim: the failure modes are a common pattern set, but the weights and the confidence score are illustrative and are not measured.</p>
+    <p class="rnote">References: <a href="https://help.gong.io/docs/receive-access-to-the-api.md" target="_blank" rel="noopener">Gong API access</a> &middot; <a href="https://help.gong.io/apidocs/introduction-2.md" target="_blank" rel="noopener">Gong API introduction</a> &middot; <a href="https://developer.salesforce.com/docs/platform/salesforce-app-limits-cheatsheet/guide/salesforce-app-limits-platform-api.html" target="_blank" rel="noopener">Salesforce API request limits</a> &middot; <a href="https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobject.htm" target="_blank" rel="noopener">Salesforce describeSObject</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Gong, Salesforce and NetSuite are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by any vendor.</footer>
+</div>
+
+<div class="ov" id="ov" role="presentation"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dt" id="dlg"></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var NODES=[
+    {id:"G",name:"Gong",role:"Conversation intelligence",mult:1.6,link:"Call signals"},
+    {id:"S",name:"Salesforce",role:"CRM of record",mult:1.45,link:"Opportunity data"},
+    {id:"Q",name:"CPQ / RLM",role:"Quotes, pricing and orders",mult:1.3,link:"Orders and contracts"},
+    {id:"N",name:"NetSuite",role:"Billing and revenue",mult:1.15,link:"Bookings and revenue"},
+    {id:"F",name:"Forecast",role:"Commit and plan",mult:1,link:""}
+  ];
+  var nById={}; NODES.forEach(function(n){nById[n.id]=n});
+  var CTL=[
+    {id:"c1",n:"Freshness SLA alerts",s:"Alert when a signal is older than allowed.",d:"Each signal gets a maximum age. When it is exceeded, an owner is alerted before anyone relies on the data."},
+    {id:"c2",n:"Field ownership and validation",s:"One writer per field, required fields enforced.",d:"Every forecast-relevant field has one owner and one writer, and validation rules block incomplete or conflicting data."},
+    {id:"c3",n:"Tracker ownership registry",s:"Owner, definition and review date per tracker.",d:"A registry keeps each tracker defined and owned, and retires the ones nobody can justify."},
+    {id:"c4",n:"Idempotent sync and replay",s:"Safe retries and a path to recover lost events.",d:"Idempotency keys make a retry harmless, and a replay path recovers events that never arrived."},
+    {id:"c5",n:"Reconciliation job",s:"Scheduled comparison, exceptions routed to owners.",d:"A scheduled job compares systems and sends every difference to a named owner instead of letting it accumulate."},
+    {id:"c6",n:"Pricing and approval guardrails",s:"Policy enforced before a quote is issued.",d:"Discount and pricing policy is checked before a quote can be sent, with an approval path for exceptions."},
+    {id:"c7",n:"Forecast data contract",s:"Versioned inputs with owners and freshness limits.",d:"A written, versioned list of forecast inputs, each with an owner and a maximum age."},
+    {id:"c8",n:"Coverage monitor",s:"Share of calls captured, by segment.",d:"Tracks how much of the customer conversation is actually captured so blind spots are visible."}
+  ];
+  var cById={}; CTL.forEach(function(c){cById[c.id]=c});
+  var FL=[
+    {id:"g1",node:"G",name:"Trackers without owner",base:5,sym:"Tracker definitions drift and nobody retires the noisy ones.",eff:"Downstream fields receive inconsistent signals.",fix:["c3"]},
+    {id:"g2",node:"G",name:"Thin call coverage",base:6,sym:"Only a fraction of customer calls are captured.",eff:"Deals look quiet when they are not, so risk signals are missing.",fix:["c8"]},
+    {id:"g3",node:"G",name:"Slow transcript sync",base:4,sym:"Signals arrive hours after the call.",eff:"Opportunity data is stale when forecast calls happen.",fix:["c1"]},
+    {id:"s1",node:"S",name:"Orphan fields",base:6,sym:"Fields exist that no tracker or process writes.",eff:"Reports and rules read values nobody maintains.",fix:["c2"]},
+    {id:"s2",node:"S",name:"Two writers on one field",base:7,sym:"Reps and automation overwrite each other.",eff:"The last writer wins and the forecast category flips.",fix:["c2"]},
+    {id:"s3",node:"S",name:"Dropped sync events",base:7,sym:"Some updates never reach downstream systems.",eff:"Quotes and orders are built on outdated opportunities.",fix:["c4"]},
+    {id:"q1",node:"Q",name:"Off-policy discounts",base:7,sym:"Discounts exceed policy without a review path.",eff:"Booked price differs from approved price and distorts bookings.",fix:["c6"]},
+    {id:"q2",node:"Q",name:"Missing quote fields",base:5,sym:"Term, start date or product data are incomplete.",eff:"Billing and revenue schedules cannot be built correctly.",fix:["c2"]},
+    {id:"q3",node:"Q",name:"Quote and order drift",base:6,sym:"Quote lines and orders disagree after amendments.",eff:"Contract value and billed value diverge.",fix:["c5"]},
+    {id:"n1",node:"N",name:"Duplicate orders on retry",base:6,sym:"A retried sync creates the same order twice.",eff:"Bookings and revenue are double counted.",fix:["c4"]},
+    {id:"n2",node:"N",name:"Billing lag after signature",base:5,sym:"Orders reach billing days after signature.",eff:"Revenue starts late and the forecast looks worse than it is.",fix:["c1"]},
+    {id:"n3",node:"N",name:"Revenue mismatch vs contract",base:7,sym:"Revenue schedules do not match contract terms.",eff:"Recognized revenue and bookings stop reconciling.",fix:["c5"]},
+    {id:"f1",node:"F",name:"Undefined forecast inputs",base:6,sym:"Nobody has defined which fields feed the forecast.",eff:"Commit numbers change with whichever data refreshed last.",fix:["c7"]},
+    {id:"f2",node:"F",name:"Plan versus actual drift",base:5,sym:"Plan assumptions are not reconciled with actuals.",eff:"Forecast error grows every quarter.",fix:["c5"]},
+    {id:"f3",node:"F",name:"Stale inputs at commit time",base:6,sym:"Inputs are older than the review cycle.",eff:"Commit calls rely on yesterday data.",fix:["c7","c1"]}
+  ];
+  var fById={}; FL.forEach(function(f){fById[f.id]=f});
+  var LAT={g3:1,n2:1,f3:1};
+  var PRESETS={healthy:[],quarter:["g3","s3","q3","n2","f3"],sprawl:["g1","g2","s1","s2","q2","f1"]};
+
+  var active={}, deployed={G:[],S:[],Q:[],N:[],F:[]}, armed=null, shown=100, busy=false, lastFocus=null;
+
+  function contained(f){return !!active[f.id] && f.fix.some(function(c){return deployed[f.node].indexOf(c)>=0})}
+  function eff(f){return active[f.id]?f.base*nById[f.node].mult*(contained(f)?0.15:1):0}
+  function calc(){
+    var nl={},total=0,items=[];
+    NODES.forEach(function(n){nl[n.id]=0});
+    FL.forEach(function(f){var e=eff(f);if(active[f.id]){nl[f.node]+=e;total+=e;items.push({f:f,e:e})}});
+    var cum=0,links=[];
+    NODES.forEach(function(n,i){cum+=nl[n.id];links.push(100*Math.exp(-cum/45))});
+    items.sort(function(a,b){return b.e-a.e});
+    return {nl:nl,total:total,items:items,links:links,score:Math.round(100*Math.exp(-total/55))};
+  }
+  function cls(h){return h>=75?"ok":(h>=45?"warn":"bad")}
+
+  /* ---------- build skeleton once ---------- */
+  function build(){
+    var html="";
+    NODES.forEach(function(n,i){
+      html+='<div class="node ok" data-node="'+n.id+'" tabindex="0" role="button" aria-label="'+n.name+': open failure modes">'+
+        '<div class="nh"><div class="mono">'+n.name.charAt(0)+'</div><div><div class="nn">'+n.name+'</div><div class="nr">'+n.role+'</div></div></div>'+
+        '<div class="meter"><i style="width:100%"></i></div><div class="fchips" data-chips="'+n.id+'"></div><div class="deps" data-deps="'+n.id+'"></div></div>';
+      if(i<NODES.length-1) html+='<div class="lnk ok" data-link="'+i+'"><div class="lab">'+n.link+'</div><div class="track"></div><div class="pkw"><span class="pk"></span><span class="pk"></span><span class="pk"></span></div></div>';
+    });
+    $("pipe").innerHTML=html;
+    $("tray").innerHTML=CTL.map(function(c,i){
+      return '<div class="ctl" draggable="true" tabindex="0" role="button" aria-pressed="false" data-cid="'+c.id+'"><div class="sh">'+(i+1)+'</div><div><div class="t">'+c.n+'</div><div class="s">'+c.s+'</div></div><button class="ibtn" data-act="info-c" data-cid="'+c.id+'" aria-label="About '+c.n+'">i</button></div>';
+    }).join("");
+  }
+
+  /* ---------- update ---------- */
+  function update(){
+    var R=calc();
+    NODES.forEach(function(n){
+      var el=document.querySelector('[data-node="'+n.id+'"]'), h=100*Math.exp(-R.nl[n.id]/18);
+      el.className="node "+cls(h)+(armed?" armed":"");
+      el.querySelector(".meter i").style.width=Math.max(6,h)+"%";
+      document.querySelector('[data-chips="'+n.id+'"]').innerHTML=FL.filter(function(f){return f.node===n.id}).map(function(f){
+        var st=!active[f.id]?"":(contained(f)?"safe":"on");
+        return '<button class="fchip '+st+'" data-act="toggle" data-fid="'+f.id+'" aria-pressed="'+!!active[f.id]+'" title="'+f.sym+'"><span class="d"></span>'+f.name+'</button>';
+      }).join("");
+      document.querySelector('[data-deps="'+n.id+'"]').innerHTML=deployed[n.id].map(function(c){
+        return '<span class="dep">'+cById[c].n+'<button data-act="undeploy" data-cid="'+c+'" data-node="'+n.id+'" aria-label="Remove '+cById[c].n+'">&times;</button></span>';
+      }).join("");
+    });
+    NODES.slice(0,4).forEach(function(n,i){
+      var lk=document.querySelector('[data-link="'+i+'"]'); lk.className="lnk "+cls(R.links[i]);
+      var lat=0; FL.forEach(function(f){if(LAT[f.id]&&active[f.id]&&!contained(f)&&NODES.map(function(x){return x.id}).indexOf(f.node)<=i)lat++});
+      lk.style.setProperty("--dur",(3*(1+0.7*Math.min(lat,3))).toFixed(1)+"s");
+    });
+    document.querySelectorAll(".ctl").forEach(function(c){c.setAttribute("aria-pressed",String(armed===c.dataset.cid))});
+    var s=R.score, b=$("band"), t=$("bandtxt"), k=cls(s);
+    b.className="band "+k;
+    b.textContent=k==="ok"?"Forecast inputs are trustworthy":(k==="warn"?"Forecast needs scrutiny":"Forecast is mostly noise");
+    t.textContent=k==="ok"?"Signals reach the forecast intact and on time.":(k==="warn"?"Some failures are degrading what the commit call sees.":"Failures upstream are compounding into the forecast.");
+    var fg=$("fg"); fg.style.stroke="var(--pk-"+k+")"; fg.style.strokeDashoffset=358.1*(1-s/100);
+    animate(s);
+    var top=R.items.slice(0,4);
+    $("drags").innerHTML=top.length?top.map(function(x){
+      return '<li data-act="node" data-node="'+x.f.node+'"><span><span class="nt">'+nById[x.f.node].name+'</span>'+x.f.name+(contained(x.f)?" (contained)":"")+'</span><span class="lo">-'+x.e.toFixed(1)+'</span></li>';
+    }).join(""):'<li class="good" style="list-style:none">No active failures. Inject one to see how it travels.</li>';
+    $("hint").innerHTML=armed?'Selected: <b>'+cById[armed].n+'</b>. Click a system to deploy it, or click the control again to cancel.':'Click a system for its failure modes, toggle a failure chip to inject it, or drag a control onto a system to deploy it.';
+    $("auto").disabled=busy;
+  }
+  function animate(to){
+    var from=shown,t0=null;
+    function step(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/600,1);$("sc").textContent=Math.round(from+(to-from)*p);if(p<1)requestAnimationFrame(step);else shown=to}
+    requestAnimationFrame(step);
+  }
+
+  /* ---------- actions ---------- */
+  function toast(m,k){var d=document.createElement("div");d.className="toast "+(k||"");d.textContent=m;$("toasts").appendChild(d);setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},3000)}
+  function toggle(fid){
+    var f=fById[fid]; if(active[fid]){delete active[fid];toast("Removed: "+f.name+".")}else{active[fid]=true;toast("Injected at "+nById[f.node].name+": "+f.name+". "+f.eff,"warn")}
+    update(); if($("ov").classList.contains("on")&&openNode)nodeModal(openNode,true);
+  }
+  function protects(cid){var u=[];FL.forEach(function(f){if(f.fix.indexOf(cid)>=0&&u.indexOf(nById[f.node].name)<0)u.push(nById[f.node].name)});return u}
+  function deploy(cid,nid,quiet){
+    var c=cById[cid], n=nById[nid];
+    if(deployed[nid].indexOf(cid)>=0){if(!quiet)toast(c.n+" is already deployed on "+n.name+".");return false}
+    var m=FL.filter(function(f){return f.node===nid&&f.fix.indexOf(cid)>=0});
+    if(!m.length){
+      var el=document.querySelector('[data-node="'+nid+'"]'); if(el){el.classList.add("shake");setTimeout(function(){el.classList.remove("shake")},450)}
+      toast("No effect on "+n.name+". "+c.n+" protects: "+protects(cid).join(", ")+".","warn"); return false;
+    }
+    deployed[nid].push(cid); armed=null; update();
+    var act=m.filter(function(f){return active[f.id]});
+    toast(c.n+" deployed on "+n.name+". "+(act.length?"Contained: "+act.map(function(f){return f.name}).join(", ")+".":"Protects against: "+m.map(function(f){return f.name}).join(", ")+"."),"ok");
+    if($("ov").classList.contains("on")&&openNode)nodeModal(openNode,true);
+    return true;
+  }
+  function undeploy(cid,nid){deployed[nid]=deployed[nid].filter(function(x){return x!==cid});update();toast("Removed "+cById[cid].n+" from "+nById[nid].name+".")}
+  function setPreset(k){active={};PRESETS[k].forEach(function(id){active[id]=true});deployed={G:[],S:[],Q:[],N:[],F:[]};armed=null;update()}
+  function autoContain(){
+    if(busy)return; busy=true; update();
+    function next(){
+      var todo=calc().items.filter(function(x){return !contained(x.f)});
+      if(!todo.length){busy=false;update();toast("All active failures are contained. Residual risk remains.","ok");return}
+      var f=todo[0].f; deploy(f.fix[0],f.node,true); setTimeout(next,650);
+    }
+    next();
+  }
+  function randomFail(){
+    var off=FL.filter(function(f){return !active[f.id]}); if(!off.length){toast("Every failure is already active.");return}
+    toggle(off[Math.floor(Math.random()*off.length)].id);
+  }
+
+  /* ---------- modals ---------- */
+  var openNode=null;
+  function openModal(title,sub,body,actions,keep){
+    if(!keep)lastFocus=document.activeElement;
+    $("dlg").innerHTML='<h3 id="dt">'+title+'</h3><p class="sub">'+sub+'</p>'+body+'<div class="act" id="dact"></div>';
+    var a=$("dact");(actions||[]).concat([{label:"Close",fn:closeModal}]).forEach(function(x){var b=document.createElement("button");b.className="btn"+(x.primary?" primary":"");b.textContent=x.label;b.onclick=function(){x.fn&&x.fn()};a.appendChild(b)});
+    $("ov").classList.add("on"); if(!keep)a.lastChild.focus();
+  }
+  function closeModal(){$("ov").classList.remove("on");openNode=null;if(lastFocus&&lastFocus.focus)try{lastFocus.focus()}catch(e){}}
+  $("ov").addEventListener("click",function(e){if(e.target===$("ov")){closeModal();return}
+    var b=e.target.closest("[data-m]"); if(!b)return;
+    if(b.dataset.m==="toggle")toggle(b.dataset.fid);
+    if(b.dataset.m==="deploy")deploy(b.dataset.cid,b.dataset.node);
+    if(b.dataset.m==="undeploy")undeploy(b.dataset.cid,b.dataset.node);
+  });
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"){if($("ov").classList.contains("on"))closeModal();else if(armed){armed=null;update()}}});
+  function nodeModal(nid,keep){
+    openNode=nid; var n=nById[nid];
+    var body=FL.filter(function(f){return f.node===nid}).map(function(f){
+      var st=!active[f.id]?"off":(contained(f)?"safe":"on"), lab={off:"Not active",on:"Active",safe:"Contained"}[st], c=cById[f.fix[0]], dep=deployed[nid].indexOf(f.fix[0])>=0;
+      return '<div class="fm '+st+'"><div class="top"><b>'+f.name+'</b><span class="tag '+st+'">'+lab+'</span></div><div class="x"><b style="font-weight:600">Symptom.</b> '+f.sym+'</div><div class="x"><b style="font-weight:600">Downstream effect.</b> '+f.eff+'</div>'+
+        '<div class="acts"><button class="btn sm" data-m="toggle" data-fid="'+f.id+'">'+(active[f.id]?"Remove failure":"Inject failure")+'</button>'+
+        (dep||f.fix.some(function(x){return deployed[nid].indexOf(x)>=0})?'<span class="tag safe" style="align-self:center">Control deployed</span>':'<button class="btn sm primary" data-m="deploy" data-cid="'+c.id+'" data-node="'+nid+'">Deploy '+c.n+'</button>')+'</div></div>';
+    }).join("");
+    openModal(n.name,n.role+". Inject a failure to see how it travels downstream, then deploy the control that contains it.",body,[],keep);
+  }
+  function ctlModal(cid){
+    var c=cById[cid], list=FL.filter(function(f){return f.fix.indexOf(cid)>=0}).map(function(f){return '<li><b>'+nById[f.node].name+'</b>: '+f.name+'</li>'}).join("");
+    openModal(c.n,"Control",'<p>'+c.d+'</p><h4>Contains these failures</h4><ul style="margin:4px 0 0;padding-left:18px;font-size:14px">'+list+'</ul>',[{label:armed===cid?"Cancel selection":"Select to place",primary:true,fn:function(){closeModal();armed=armed===cid?null:cid;update()}}]);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener("click",function(e){
+    var a=e.target.closest("[data-act]");
+    if(a&&!$("ov").contains(a)){
+      var act=a.dataset.act;
+      if(act==="toggle"){e.stopPropagation();toggle(a.dataset.fid);return}
+      if(act==="undeploy"){e.stopPropagation();undeploy(a.dataset.cid,a.dataset.node);return}
+      if(act==="info-c"){e.stopPropagation();ctlModal(a.dataset.cid);return}
+      if(act==="node"){nodeModal(a.dataset.node);return}
+    }
+    var ctl=e.target.closest(".ctl");
+    if(ctl){var id=ctl.dataset.cid;armed=armed===id?null:id;update();return}
+    var nd=e.target.closest(".node");
+    if(nd&&!$("ov").contains(nd)){if(armed)deploy(armed,nd.dataset.node);else nodeModal(nd.dataset.node)}
+  });
+  document.addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return; var t=e.target;
+    if(t.classList&&(t.classList.contains("node")||t.classList.contains("ctl"))){e.preventDefault();t.click()}
+  });
+  document.addEventListener("dragstart",function(e){var c=e.target.closest&&e.target.closest(".ctl");if(!c)return;e.dataTransfer.setData("text/plain",c.dataset.cid);e.dataTransfer.effectAllowed="copy";armed=null});
+  document.addEventListener("dragover",function(e){var n=e.target.closest&&e.target.closest(".node");if(!n)return;e.preventDefault();e.dataTransfer.dropEffect="copy";n.classList.add("over")});
+  document.addEventListener("dragleave",function(e){var n=e.target.closest&&e.target.closest(".node");if(n&&!n.contains(e.relatedTarget))n.classList.remove("over")});
+  document.addEventListener("drop",function(e){var n=e.target.closest&&e.target.closest(".node");if(!n)return;e.preventDefault();n.classList.remove("over");var cid=e.dataTransfer.getData("text/plain");if(cById[cid])deploy(cid,n.dataset.node)});
+  document.addEventListener("dragend",function(){document.querySelectorAll(".over").forEach(function(x){x.classList.remove("over")})});
+
+  document.querySelectorAll("[data-preset]").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("[data-preset]").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");setPreset(b.dataset.preset)})});
+  $("rand").addEventListener("click",randomFail);
+  $("auto").addEventListener("click",autoContain);
+  $("reset").addEventListener("click",function(){document.querySelectorAll("[data-preset]").forEach(function(x){x.setAttribute("aria-pressed",String(x.dataset.preset==="healthy"))});setPreset("healthy");toast("Reset.")});
+
+  build(); setPreset("quarter");
+})();
+</script>
+</body>
+</html>

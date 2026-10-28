@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gong and Salesforce: AI Guardrail Playground | Andres Videla</title>
+<meta name="description" content="An interactive demo with fictional data: an AI proposes CRM updates from a call transcript, and configurable guardrails decide what is applied, reviewed by a human or blocked.">
+<meta name="author" content="Andres Videla">
+<meta property="og:url" content="https://andres-videla.com/demo/ai-guardrails/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<link rel="canonical" href="https://andres-videla.com/demo/ai-guardrails/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gong and Salesforce: AI Guardrail Playground">
+<meta property="og:description" content="Turn guardrails on and off and see which AI-proposed CRM updates are applied, reviewed or blocked, then reveal which ones were wrong.">
+<meta property="og:image" content="https://andres-videla.com/assets/ai-guardrails-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0; --soft:#f0f1ef;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --hl:#fff2a8; --shadow:0 10px 30px rgba(20,24,32,.18);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37; --soft:#20242b;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+    --hl:#5a4b10; --shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37; --soft:#20242b;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  --hl:#5a4b10; --shadow:0 10px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 16px 64px}
+.back{display:inline-block;margin-bottom:12px;font-size:14px;color:var(--accent)}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:700}
+.lede{color:var(--muted);max-width:800px;margin:0 0 16px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:14px}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:3px 9px;font-size:12px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:center;margin-bottom:14px}
+.bar .grp{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.bar .lab{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.layout{display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:960px){.layout{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.tx{font-size:14px;display:flex;flex-direction:column;gap:6px;max-height:330px;overflow:auto}
+.tx .l{padding:5px 8px;border-radius:6px;background:var(--bg)}
+.tx .l b{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-right:6px}
+.tx mark{background:var(--hl);color:inherit;border-radius:3px;padding:1px 2px}
+.miss{font-size:13px;border:1px solid var(--bad);background:var(--bad-soft);color:var(--bad);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.rule{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.rule:first-of-type{border-top:0}
+.rule .n{font-size:14px;font-weight:600}
+.rule .d{font-size:12px;color:var(--muted)}
+.sw{position:relative;width:38px;height:22px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:999px;background:var(--line);transition:background .15s}
+.sw span::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+.sw input:checked + span{background:var(--accent)}
+.sw input:checked + span::after{transform:translateX(16px)}
+.sw input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.ibtn{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:12px;line-height:1;color:var(--muted);padding:0;font-style:italic;font-family:Georgia,serif}
+.ibtn:hover{color:var(--accent);border-color:var(--accent)}
+.thr{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.thr label{display:flex;justify-content:space-between;font-size:14px;font-weight:600}
+.thr input{width:100%;accent-color:var(--accent)}
+.lanes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:1180px){.lanes{grid-template-columns:1fr}}
+.lane{border:1.5px dashed var(--line);border-radius:12px;padding:10px;min-height:170px;background:var(--bg);transition:border-color .15s,background .15s}
+.lane.over{border-style:solid;border-color:var(--accent);background:var(--accent-soft)}
+.lane h3{margin:0 0 10px;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+.lane h3 .c{font-size:12px;border-radius:999px;padding:1px 9px;font-weight:700}
+.lane.auto h3{color:var(--ok)} .lane.auto h3 .c{background:var(--ok-soft)}
+.lane.review h3{color:var(--warn)} .lane.review h3 .c{background:var(--warn-soft)}
+.lane.blocked h3{color:var(--bad)} .lane.blocked h3 .c{background:var(--bad-soft)}
+.lane .sub{font-size:12px;color:var(--muted);margin:-6px 0 10px}
+.ucard{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 10px;margin-bottom:8px;cursor:grab;position:relative;transition:box-shadow .12s,transform .12s,border-color .12s}
+.ucard:hover{box-shadow:0 4px 14px rgba(20,24,32,.12);transform:translateY(-1px)}
+.ucard:active{cursor:grabbing}
+.ucard.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),0 0 0 3px var(--accent)}
+.ucard.moved{animation:pulse .9s}
+@keyframes pulse{0%{background:var(--accent-soft);transform:scale(1.03)}100%{background:var(--surface);transform:scale(1)}}
+.ucard.right{border-left:4px solid var(--ok)} .ucard.wrong{border-left:4px solid var(--bad)}
+.uh{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.api{font:600 12px/1.3 var(--mono);word-break:break-all}
+.conf{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;flex:none}
+.cb{height:4px;background:var(--line);border-radius:2px;margin:5px 0 7px;overflow:hidden}
+.cb i{display:block;height:100%;background:var(--accent);border-radius:2px}
+.uv{font-size:13px}
+.uv .cur{color:var(--muted);text-decoration:line-through}
+.ev{font-size:12px;color:var(--muted);margin-top:5px;font-style:italic}
+.why{font-size:12px;margin-top:6px;border-radius:6px;padding:3px 7px;background:var(--soft)}
+.why.pass{background:var(--ok-soft);color:var(--ok)} .why.rev{background:var(--warn-soft);color:var(--warn)} .why.blk{background:var(--bad-soft);color:var(--bad)}
+.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.badge{font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px}
+.badge.ok{background:var(--ok-soft);color:var(--ok)} .badge.bad{background:var(--bad-soft);color:var(--bad)} .badge.man{background:var(--accent-soft);color:var(--accent)}
+.uf{display:flex;gap:6px;margin-top:8px}
+.empty{font-size:13px;color:var(--muted);text-align:center;padding:16px 6px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 12px}
+@media (max-width:620px){.kpis{grid-template-columns:1fr}}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.kpi b{display:block;font-size:30px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.red b{color:var(--bad)} .kpi.amber b{color:var(--warn)}
+.verdict{border-radius:10px;padding:10px 12px;font-size:14px;font-weight:600}
+.verdict.ok{background:var(--ok-soft);color:var(--ok)} .verdict.bad{background:var(--bad-soft);color:var(--bad)} .verdict.neutral{background:var(--soft);color:var(--muted);font-weight:400}
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+@media (max-width:760px){.principles{grid-template-columns:1fr}}
+.principles div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.principles b{display:block;margin-bottom:4px}
+.principles p{margin:0;color:var(--muted)}
+footer{margin-top:24px;font-size:13px;color:var(--muted)}
+.ov{position:fixed;inset:0;background:rgba(10,12,16,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.ov.on{display:flex}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:18px;animation:pop .2s}
+@keyframes pop{from{transform:scale(.94);opacity:0}to{transform:scale(1);opacity:1}}
+.dlg h3{margin:0 0 8px;font-size:18px}
+.dlg h4{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.dlg p{margin:0;font-size:14px}
+.dlg table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+.dlg td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+.dlg td:last-child{text-align:right;white-space:nowrap}
+.st{font-weight:700;font-size:12px;border-radius:999px;padding:1px 9px}
+.st.pass{background:var(--ok-soft);color:var(--ok)} .st.fail{background:var(--bad-soft);color:var(--bad)} .st.off{background:var(--soft);color:var(--muted)}
+.dlg .act{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+#toasts{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;z-index:60;width:calc(100% - 32px);max-width:480px;pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);border-radius:8px;padding:9px 14px;font-size:14px;box-shadow:var(--shadow);animation:pop .2s;pointer-events:auto}
+.toast.warn{background:var(--warn);color:#fff} .toast.error{background:var(--bad);color:#fff} .toast.ok{background:var(--ok);color:#fff}
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.mwrap{overflow-x:auto;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.mtab{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+.mtab th,.mtab td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.mtab tr:last-child td{border-bottom:0}
+.mtab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Gong and Salesforce: AI Guardrail Playground</h1>
+  <p class="lede">A model reads a call transcript and proposes CRM updates. Some are right, some are invented, and some are plausible but wrong. Configure the guardrails, move cards between lanes, then reveal which updates were wrong and see what actually reached the CRM.</p>
+  <div class="notice">Fictional calls, accounts and fields. The AI output is a fixed mock, not a live model, and human review is assumed to catch errors. The scenarios are composite and built to show failure modes, so the counts illustrate trade-offs and are not measurements of any real system.</div>
+
+  <div class="bar">
+    <div class="grp" role="group" aria-label="Call scenario"><span class="lab">Call</span>
+      <button class="chip" data-sc="renewal" aria-pressed="true">Renewal call</button>
+      <button class="chip" data-sc="discovery" aria-pressed="false">Discovery call</button>
+      <button class="chip" data-sc="procurement" aria-pressed="false">Procurement call</button>
+    </div>
+    <div class="grp" role="group" aria-label="Guardrail preset"><span class="lab">Guardrails</span>
+      <button class="chip" data-gp="none" aria-pressed="false">None</button>
+      <button class="chip" data-gp="balanced" aria-pressed="true">Balanced</button>
+      <button class="chip" data-gp="strict" aria-pressed="false">Strict</button>
+    </div>
+    <button class="btn" id="how">How routing works</button>
+  </div>
+
+  <div class="layout">
+    <div class="stack">
+      <section class="panel" aria-labelledby="t-tx">
+        <h2 id="t-tx">Call transcript</h2>
+        <div id="miss"></div>
+        <div class="tx" id="tx"></div>
+        <p style="font-size:12px;color:var(--muted);margin:8px 0 0">Click an update to see where its evidence appears.</p>
+      </section>
+      <section class="panel" aria-labelledby="t-r">
+        <h2 id="t-r">Guardrails</h2>
+        <div id="rules"></div>
+        <div class="thr"><label for="thr">Confidence threshold <output id="othr"></output></label><input type="range" id="thr" min="50" max="99" step="1"></div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section aria-labelledby="t-l">
+        <h2 id="t-l">AI-proposed CRM updates</h2>
+        <div class="lanes" id="lanes"></div>
+      </section>
+      <section class="panel" aria-labelledby="t-o">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><h2 id="t-o" style="margin:0">What reached the CRM</h2><button class="btn primary" id="reveal">Reveal ground truth</button></div>
+        <div class="kpis">
+          <div class="kpi"><b id="k1">0</b><span>Updates applied automatically</span></div>
+          <div class="kpi red"><b id="k2">?</b><span>Wrong updates written to the CRM</span></div>
+          <div class="kpi amber"><b id="k3">?</b><span>Correct updates held back</span></div>
+        </div>
+        <div class="verdict neutral" id="verdict">Reveal the ground truth to see how many wrong updates slipped through and how many correct ones were held back.</div>
+      </section>
+    </div>
+  </div>
+
+  <div class="principles">
+    <div><b>Ground every value in evidence</b><p>A value without a verifiable quote is a guess. Verifying the quote against the transcript catches invented values, at the cost of blocking honest paraphrases.</p></div>
+    <div><b>Plausible is the dangerous case</b><p>The worst errors cite real quotes and still draw the wrong conclusion. Only field policy and human review catch those.</p></div>
+    <div><b>Every guardrail has a price</b><p>Stricter rules hold back more correct updates. Design the thresholds against the cost of a wrong value in each field.</p></div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid"><div><b>Data sources</b><ul><li>Call transcripts can be requested from Gong by call IDs or by date range.</li><li>Field types and picklist values for the schema check come from Salesforce describe, filtering out inactive values.</li><li>Protected fields, overwrite policy and thresholds are decisions of the organization.</li></ul></div><div><b>Limits and prerequisites</b><ul><li>Gong API credentials are issued by a technical administrator.</li><li>Gong documents default limits of 3 calls per second and 10,000 calls per day for the company.</li><li>Salesforce API requests are pooled per org within a 24-hour period. For Enterprise Edition the allowance is 100,000 plus a per-license amount and any purchased add-ons, and exceeding it returns HTTP 403 REQUEST_LIMIT_EXCEEDED.</li><li>The model in this demo is a fixed mock. A real version needs a language model that returns structured output, and its cost and latency must be sized for the call volume.</li></ul></div><div><b>How it would be validated</b><ul><li>Ground truth in this demo is known by construction. In a real org it comes from people reviewing a sampled set of proposed updates.</li><li>Track the two numbers shown here: wrong updates that reached the CRM and correct updates that were held back.</li><li>Strict quote matching would also block honest paraphrases and transcription errors. Test how often before choosing it.</li></ul></div></div>
+    <p class="rnote">What this demo does not claim: the counts are produced by three fictional calls and do not predict the behavior of a real model.</p>
+    <p class="rnote">References: <a href="https://help.gong.io/docs/receive-access-to-the-api.md" target="_blank" rel="noopener">Gong API access</a> &middot; <a href="https://help.gong.io/apidocs/introduction-2.md" target="_blank" rel="noopener">Gong API introduction</a> &middot; <a href="https://developer.salesforce.com/docs/platform/salesforce-app-limits-cheatsheet/guide/salesforce-app-limits-platform-api.html" target="_blank" rel="noopener">Salesforce API request limits</a> &middot; <a href="https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobject.htm" target="_blank" rel="noopener">Salesforce describeSObject</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Gong and Salesforce are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by either vendor.</footer>
+</div>
+
+<div class="ov" id="ov" role="presentation"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dt" id="dlg"></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+
+  var FM={
+    Close_Date__c:{type:"date",prot:true}, Primary_Competitor__c:{type:"picklist",allowed:["Acme Dialer","Contoso Call","Other"]},
+    Champion__c:{type:"text"}, Amount:{type:"number",prot:true}, Renewal_Risk__c:{type:"picklist",allowed:["Low","Medium","High"]},
+    StageName:{type:"picklist",prot:true,allowed:["Qualification","Negotiation","Closed Won","Closed Lost"]}, Next_Step__c:{type:"text"},
+    Security_Review_Required__c:{type:"checkbox"}, Economic_Buyer__c:{type:"text"}, Budget_Status__c:{type:"picklist",allowed:["Unknown","Not allocated","Approved"]},
+    Use_Case__c:{type:"picklist",allowed:["Support consolidation","Sales enablement","Analytics"]}, Go_Live_Date__c:{type:"date"},
+    Pain_Severity__c:{type:"picklist",allowed:["Low","Medium","High"]}, Legal_Status__c:{type:"picklist",allowed:["Not started","In review","Approved"]},
+    Discount_Pct__c:{type:"number",prot:true}, Payment_Terms__c:{type:"picklist",allowed:["Net 30","Net 45","Net 60"]},
+    Security_Review__c:{type:"picklist",allowed:["Pending","Complete"]}, Approver__c:{type:"text"}
+  };
+
+  var SC={
+    renewal:{lines:[
+      ["Rep","Thanks for joining. We are on track to renew the 120 seat plan before the end of the quarter."],
+      ["Buyer","Yes, though we need to push signature to January because our procurement team is reviewing vendors."],
+      ["Rep","Understood. Is a competitor part of that review?"],
+      ["Buyer","We are looking at Acme Dialer as an alternative, mostly for pricing."],
+      ["Rep","Got it. Dana is still your sponsor on this?"],
+      ["Buyer","Dana is moving to another team next month, so Priya Shah will take over."],
+      ["Rep","Great. I will send the revised order form on Friday."],
+      ["Buyer","And please include the security addendum."]],
+     u:[
+      {id:"a1",f:"Close_Date__c",cur:"2026-12-15",val:"2027-01-15",ev:"we need to push signature to January",conf:.82,ok:true,note:"The month is stated, the day is inferred. Close date is a protected field, so a human confirms it."},
+      {id:"a2",f:"Primary_Competitor__c",cur:"",val:"Acme Dialer",ev:"We are looking at Acme Dialer as an alternative",conf:.93,ok:true,note:"Explicit, grounded and compatible with the picklist."},
+      {id:"a3",f:"Champion__c",cur:"Dana Lee",val:"Priya Shah",ev:"Priya Shah will take over",conf:.71,ok:false,note:"A successor taking over is not a confirmed champion. The quote is real but the conclusion overreaches."},
+      {id:"a4",f:"Amount",cur:"120000",val:150000,ev:"the 150 seat plan",conf:.9,ok:false,note:"Invented. Nobody mentions 150 seats on this call, yet the model reports high confidence."},
+      {id:"a5",f:"Renewal_Risk__c",cur:"Low",val:"High",ev:"procurement team is reviewing vendors",conf:.88,ok:true,note:"A vendor review and a slipped date justify the change, so it is correct but overwrites an existing value."},
+      {id:"a6",f:"StageName",cur:"Negotiation",val:"Closed Won",ev:"on track to renew",conf:.91,ok:false,note:"On track to renew is intent, not a closed deal. The quote is real and the conclusion is wrong."},
+      {id:"a7",f:"Next_Step__c",cur:"",val:"Send revised order form on Friday",ev:"I will send the revised order form on Friday",conf:.86,ok:true,note:"Explicit commitment on an empty field."},
+      {id:"a8",f:"Security_Review_Required__c",cur:"",val:true,ev:"buyer wants the security addendum included",conf:.84,ok:true,note:"Correct, but the evidence is a paraphrase, so strict quote matching blocks it."}
+     ]},
+    discovery:{lines:[
+      ["Rep","Tell me what prompted the evaluation."],
+      ["Buyer","Our support queue doubled this year and our agents are stuck switching between three tools."],
+      ["Rep","Who owns the budget for a project like this?"],
+      ["Buyer","Marcus Reed, our VP of Operations, signs off on anything over fifty thousand."],
+      ["Rep","And is there a budget set aside already?"],
+      ["Buyer","We have not allocated anything yet, we want to see a proposal first."],
+      ["Rep","What timeline are you working toward?"],
+      ["Buyer","Ideally we would go live before the end of the second quarter."]],
+     u:[
+      {id:"b1",f:"Economic_Buyer__c",cur:"",val:"Marcus Reed",ev:"Marcus Reed, our VP of Operations, signs off",conf:.94,ok:true,note:"Explicit and grounded on an empty field."},
+      {id:"b2",f:"Budget_Status__c",cur:"Unknown",val:"Approved",ev:"fifty thousand",conf:.77,ok:false,note:"The buyer says nothing is allocated. The model latched onto a number and read it as approved budget."},
+      {id:"b3",f:"Use_Case__c",cur:"",val:"Support consolidation",ev:"agents are stuck switching between three tools",conf:.9,ok:true,note:"Grounded and consistent with the picklist."},
+      {id:"b4",f:"Amount",cur:"",val:75000,ev:"signs off on anything over fifty thousand",conf:.62,ok:false,note:"A sign-off threshold is not a deal amount. Plausible, grounded and wrong."},
+      {id:"b5",f:"Go_Live_Date__c",cur:"",val:"2027-06-30",ev:"before the end of the second quarter",conf:.85,ok:true,note:"A reasonable reading of an explicit target on an unprotected field."},
+      {id:"b6",f:"Primary_Competitor__c",cur:"",val:"Contoso Call",ev:"stuck switching between three tools",conf:.58,ok:false,note:"No competitor is named on the call. The quote does not support the value."},
+      {id:"b7",f:"Pain_Severity__c",cur:"",val:"Critical",ev:"support queue doubled",conf:.7,ok:false,note:"Critical is not a valid picklist value. The schema check stops it."},
+      {id:"b8",f:"Close_Date__c",cur:"2027-03-31",val:"2027-06-30",ev:"end of the second quarter",conf:.8,ok:false,note:"That is a go-live target, not a close date. Confusing the two moves the forecast."}
+     ]},
+    procurement:{lines:[
+      ["Buyer","Legal has the redlines and expects to finish review next week."],
+      ["Rep","Perfect. On commercial terms, can you accept the ten percent discount?"],
+      ["Buyer","We would need fifteen percent, and payment terms of net sixty."],
+      ["Rep","I will take that to our deal desk, no promises on either."],
+      ["Buyer","Our security team completed the questionnaire last Friday."]],
+     u:[
+      {id:"c1",f:"Legal_Status__c",cur:"Not started",val:"In review",ev:"Legal has the redlines",conf:.9,ok:true,note:"Correct, but it overwrites an existing value."},
+      {id:"c2",f:"Discount_Pct__c",cur:"10",val:15,ev:"We would need fifteen percent",conf:.89,ok:false,note:"A buyer request is not an agreed discount. The rep explicitly made no promises."},
+      {id:"c3",f:"Payment_Terms__c",cur:"Net 30",val:"Net 60",ev:"payment terms of net sixty",conf:.87,ok:false,note:"Same pattern: a request recorded as a commitment."},
+      {id:"c4",f:"Security_Review__c",cur:"Pending",val:"Complete",ev:"completed the questionnaire last Friday",conf:.92,ok:true,note:"Correct, but it overwrites an existing value."},
+      {id:"c5",f:"StageName",cur:"Negotiation",val:"Closed Won",ev:"I will take that to our deal desk",conf:.55,ok:false,note:"The quote has nothing to do with closing. A low confidence and a protected field both flag it."},
+      {id:"c6",f:"Approver__c",cur:"",val:"Deal Desk",ev:"I will take that to our deal desk",conf:.93,ok:true,note:"Explicit and grounded on an empty field."}
+     ]}
+  };
+
+  var RULES=[
+    {k:"r1",n:"Verify evidence in transcript",d:"The quoted evidence must appear verbatim.",why:"Catches invented values by requiring a quote that exists. A correct paraphrase fails this check, which is the price of strictness. Failing updates are blocked."},
+    {k:"r2",n:"Validate against schema",d:"Value must fit the field type and picklist.",why:"Stops values the CRM would reject or silently coerce, such as a picklist option that does not exist. Failing updates are blocked."},
+    {k:"r3",n:"Require confidence threshold",d:"Low-confidence updates go to a human.",why:"Model confidence is only a weak signal and is often high on wrong answers, so it should never be the only guardrail. Failing updates go to review."},
+    {k:"r4",n:"Protect critical fields",d:"Stage, amount, close date and discount need a human.",why:"Some fields drive the forecast and approvals. The cost of one wrong value is high enough to justify a mandatory review."},
+    {k:"r5",n:"Review overwrites",d:"Changing an existing value needs a human.",why:"Filling an empty field is low risk. Replacing a value somebody entered is where silent damage happens."}
+  ];
+  var PRE={none:{r1:false,r2:false,r3:false,r4:false,r5:false,thr:80},balanced:{r1:true,r2:true,r3:true,r4:true,r5:true,thr:80},strict:{r1:true,r2:true,r3:true,r4:true,r5:true,thr:95}};
+
+  var sc="renewal", R=Object.assign({},PRE.balanced), ov={}, sel=null, revealed=false, prev={}, lastFocus=null;
+
+  function norm(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim()}
+  function fullText(){return norm(SC[sc].lines.map(function(l){return l[1]}).join(" "))}
+  function valid(u){
+    var m=FM[u.f],v=u.val;
+    if(m.type==="picklist")return m.allowed.indexOf(v)>=0;
+    if(m.type==="number")return typeof v==="number"&&v>=0;
+    if(m.type==="date")return /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if(m.type==="checkbox")return typeof v==="boolean";
+    return typeof v==="string"&&v.length>0;
+  }
+  function route(u){
+    var m=FM[u.f], grounded=fullText().indexOf(norm(u.ev))>=0, schema=valid(u), thrOk=u.conf*100>=R.thr, prot=!!m.prot, over=u.cur!==""&&String(u.cur)!==String(u.val);
+    var c=[
+      {k:"r1",n:"Evidence found in transcript",pass:grounded,note:grounded?"Quote located in the transcript.":"Quote does not appear in the transcript."},
+      {k:"r2",n:"Value valid for the field",pass:schema,note:schema?"Value fits the field type.":"Value is not valid for this field."},
+      {k:"r3",n:"Confidence at or above threshold",pass:thrOk,note:Math.round(u.conf*100)+"% against a threshold of "+R.thr+"%."},
+      {k:"r4",n:"Field is not protected",pass:!prot,note:prot?"Protected field.":"Not a protected field."},
+      {k:"r5",n:"Does not overwrite a value",pass:!over,note:over?"Replaces the current value.":"Field is empty or unchanged."}
+    ];
+    var lane="auto", why="Passed all active checks.", cls="pass";
+    if(R.r1&&!grounded){lane="blocked";why="Blocked: evidence not found in transcript.";cls="blk"}
+    else if(R.r2&&!schema){lane="blocked";why="Blocked: value not valid for the field.";cls="blk"}
+    else if(R.r3&&!thrOk){lane="review";why="Review: confidence below "+R.thr+"%.";cls="rev"}
+    else if(R.r4&&prot){lane="review";why="Review: protected field.";cls="rev"}
+    else if(R.r5&&over){lane="review";why="Review: overwrites an existing value.";cls="rev"}
+    return {lane:lane,why:why,cls:cls,checks:c};
+  }
+  function state(){
+    return SC[sc].u.map(function(u){var r=route(u);return {u:u,r:r,lane:ov[u.id]||r.lane,over:!!ov[u.id]}});
+  }
+  function fmt(v){return typeof v==="number"?v.toLocaleString("en-US"):(typeof v==="boolean"?(v?"Checked":"Unchecked"):(v===""?"Empty":v))}
+
+  function render(){
+    var S=state(), L={auto:[],review:[],blocked:[]};
+    S.forEach(function(x){L[x.lane].push(x)});
+    var meta={auto:["Auto-apply","Written to the CRM with no human"],review:["Human review","A person confirms before it is written"],blocked:["Blocked","Rejected, never written"]};
+    $("lanes").innerHTML=["auto","review","blocked"].map(function(k){
+      return '<div class="lane '+k+'" data-lane="'+k+'"><h3>'+meta[k][0]+'<span class="c">'+L[k].length+'</span></h3><div class="sub">'+meta[k][1]+'</div>'+
+        (L[k].length?L[k].map(card).join(""):'<div class="empty">Drop an update here</div>')+'</div>';
+    }).join("");
+    document.querySelectorAll(".ucard.moved").forEach(function(){});
+    S.forEach(function(x){prev[x.u.id]=x.lane});
+
+    $("rules").innerHTML=RULES.map(function(r){
+      return '<div class="rule"><label class="sw"><input type="checkbox" data-rule="'+r.k+'" '+(R[r.k]?"checked":"")+' aria-label="'+r.n+'"><span></span></label><div><div class="n">'+r.n+'</div><div class="d">'+r.d+'</div></div><button class="ibtn" data-info="'+r.k+'" aria-label="About '+r.n+'">i</button></div>';
+    }).join("");
+    $("thr").value=R.thr; $("othr").textContent=R.thr+"%"; $("thr").disabled=!R.r3; $("thr").style.opacity=R.r3?1:.45;
+
+    var auto=L.auto.length, leak=L.auto.filter(function(x){return !x.u.ok}).length, held=L.review.concat(L.blocked).filter(function(x){return x.u.ok}).length;
+    $("k1").textContent=auto; $("k2").textContent=revealed?leak:"?"; $("k3").textContent=revealed?held:"?";
+    var v=$("verdict");
+    if(!revealed){v.className="verdict neutral";v.textContent="Reveal the ground truth to see how many wrong updates slipped through and how many correct ones were held back."}
+    else if(leak){v.className="verdict bad";v.textContent=leak+" wrong update"+(leak>1?"s":"")+" reached the CRM without a human seeing "+(leak>1?"them":"it")+". "+(held?held+" correct update"+(held>1?"s were":" was")+" held back.":"Nothing correct was held back, but that is little comfort.")}
+    else{v.className="verdict ok";v.textContent="No wrong update reached the CRM. "+(held?held+" correct update"+(held>1?"s were":" was")+" held back, which is the cost of these guardrails.":"Nothing correct was held back either.")}
+    $("reveal").textContent=revealed?"Hide ground truth":"Reveal ground truth";
+    renderTx();
+  }
+  function card(x){
+    var u=x.u, m=FM[u.f], cls="ucard"+(sel===u.id?" sel":"")+(revealed?(u.ok?" right":" wrong"):"");
+    var badges="";
+    if(x.over)badges+='<span class="badge man">Manual override</span>';
+    if(m.prot)badges+='<span class="badge man" style="background:var(--soft);color:var(--muted)">Protected</span>';
+    if(revealed)badges+=u.ok?'<span class="badge ok">Correct</span>':'<span class="badge bad">Wrong</span>';
+    return '<div class="'+cls+'" draggable="true" data-id="'+u.id+'" data-from="'+x.lane+'"><div class="uh"><span class="api">'+u.f+'</span><span class="conf">'+Math.round(u.conf*100)+'%</span></div>'+
+      '<div class="cb"><i style="width:'+Math.round(u.conf*100)+'%"></i></div>'+
+      '<div class="uv">'+(u.cur!==""?'<span class="cur">'+fmt(isNaN(+u.cur)?u.cur:+u.cur)+'</span> &rarr; ':'')+'<b>'+fmt(u.val)+'</b></div>'+
+      '<div class="ev">&ldquo;'+u.ev+'&rdquo;</div><div class="why '+x.r.cls+'">'+(x.over?"Moved by you. Natural route: "+x.r.lane+".":x.r.why)+'</div>'+
+      (badges?'<div class="badges">'+badges+'</div>':'')+
+      '<div class="uf"><button class="btn sm" data-act="detail" data-id="'+u.id+'">Details</button></div></div>';
+  }
+  function renderTx(){
+    var S=SC[sc], u=null; S.u.forEach(function(x){if(x.id===sel)u=x});
+    var found=false;
+    $("tx").innerHTML=S.lines.map(function(l){
+      var t=l[1].replace(/&/g,"&amp;").replace(/</g,"&lt;");
+      if(u){var i=l[1].toLowerCase().indexOf(u.ev.toLowerCase());if(i>=0){found=true;t=esc(l[1].slice(0,i))+"<mark>"+esc(l[1].slice(i,i+u.ev.length))+"</mark>"+esc(l[1].slice(i+u.ev.length))}}
+      return '<div class="l"><b>'+l[0]+'</b>'+t+'</div>';
+    }).join("");
+    $("miss").innerHTML=(u&&!found)?'<div class="miss">Evidence not found in the transcript: &ldquo;'+u.ev+'&rdquo;</div>':"";
+  }
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+
+  function toast(msg,kind){var d=document.createElement("div");d.className="toast "+(kind||"");d.textContent=msg;$("toasts").appendChild(d);setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},2800)}
+  function openModal(title,body,actions){
+    lastFocus=document.activeElement;
+    $("dlg").innerHTML='<h3 id="dt">'+title+'</h3>'+body+'<div class="act" id="dact"></div>';
+    var a=$("dact");(actions||[]).concat([{label:"Close",fn:closeModal}]).forEach(function(x){var b=document.createElement("button");b.className="btn"+(x.primary?" primary":"");b.textContent=x.label;b.onclick=function(){x.fn&&x.fn()};a.appendChild(b)});
+    $("ov").classList.add("on");a.lastChild.focus();
+  }
+  function closeModal(){$("ov").classList.remove("on");if(lastFocus&&lastFocus.focus)try{lastFocus.focus()}catch(e){}}
+  $("ov").addEventListener("click",function(e){if(e.target===$("ov"))closeModal()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&$("ov").classList.contains("on"))closeModal()});
+
+  function detail(id){
+    var x=state().filter(function(s){return s.u.id===id})[0], u=x.u;
+    var rows=x.r.checks.map(function(c){
+      var on=R[c.k], st=!on?'<span class="st off">Off</span>':(c.pass?'<span class="st pass">Pass</span>':'<span class="st fail">Fail</span>');
+      return '<tr><td><b>'+c.n+'</b><br><span style="color:var(--muted)">'+c.note+'</span></td><td>'+st+'</td></tr>';
+    }).join("");
+    var truth=revealed?'<p><span class="badge '+(u.ok?"ok":"bad")+'">'+(u.ok?"Correct":"Wrong")+'</span> '+u.note+'</p>':'<p style="color:var(--muted)">Hidden. Use Reveal ground truth to see whether this update was right.</p>';
+    var lanes=[["auto","Auto-apply"],["review","Human review"],["blocked","Blocked"]].filter(function(l){return l[0]!==x.lane}).map(function(l){return {label:"Move to "+l[1],fn:function(){closeModal();moveTo(id,l[0])}}});
+    openModal(u.f,'<p>Proposes <b>'+fmt(u.val)+'</b>'+(u.cur!==""?' in place of '+fmt(isNaN(+u.cur)?u.cur:+u.cur):' on an empty field')+'. Evidence: &ldquo;'+u.ev+'&rdquo;</p><h4>Guardrail checks</h4><table>'+rows+'</table><h4>Routing</h4><p>'+(x.over?"You moved this update. The guardrails would have sent it to "+x.r.lane+".":x.r.why)+'</p><h4>Ground truth</h4>'+truth,lanes);
+  }
+  function moveTo(id,lane){
+    var x=state().filter(function(s){return s.u.id===id})[0];
+    if(lane===x.r.lane)delete ov[id]; else ov[id]=lane;
+    render();flash(id);
+    if(lane==="auto"&&x.r.lane!=="auto")toast("Override: skipped the guardrail. "+x.r.why,"warn");
+    else toast("Moved to "+{auto:"Auto-apply",review:"Human review",blocked:"Blocked"}[lane]+".");
+  }
+  function flash(id){var el=document.querySelector('.ucard[data-id="'+id+'"]');if(el){el.classList.add("moved")}}
+
+  function setScenario(k){sc=k;ov={};sel=null;prev={};render()}
+  function setPreset(k){
+    var before=state().filter(function(x){return x.lane==="auto"}).length;
+    R=Object.assign({},PRE[k]);ov={};render();
+    var after=state().filter(function(x){return x.lane==="auto"}).length;
+    toast(after+" of "+SC[sc].u.length+" updates are now applied automatically"+(after>before?".":" (was "+before+")."),after>before&&k==="none"?"warn":"");
+  }
+  function syncPresetChips(){
+    var m=null;Object.keys(PRE).forEach(function(k){var p=PRE[k];if(["r1","r2","r3","r4","r5","thr"].every(function(f){return p[f]===R[f]}))m=k});
+    document.querySelectorAll("[data-gp]").forEach(function(b){b.setAttribute("aria-pressed",String(b.dataset.gp===m))});
+  }
+
+  document.addEventListener("click",function(e){
+    var el=e.target.closest("[data-act]");
+    if(el&&el.dataset.act==="detail"){e.stopPropagation();detail(el.dataset.id);return}
+    var inf=e.target.closest("[data-info]");
+    if(inf){var r=RULES.filter(function(x){return x.k===inf.dataset.info})[0];openModal(r.n,'<p>'+r.d+'</p><h4>Why it exists</h4><p>'+r.why+'</p>');return}
+    var c=e.target.closest(".ucard");
+    if(c){sel=(sel===c.dataset.id)?null:c.dataset.id;render()}
+  });
+  document.addEventListener("change",function(e){
+    var k=e.target.dataset&&e.target.dataset.rule;
+    if(k){R[k]=e.target.checked;ov={};render();syncPresetChips();toast(RULES.filter(function(r){return r.k===k})[0].n+(R[k]?": on.":": off."))}
+  });
+  $("thr").addEventListener("input",function(){R.thr=+$("thr").value;ov={};render();syncPresetChips()});
+  $("reveal").addEventListener("click",function(){revealed=!revealed;render();if(revealed)toast("Ground truth revealed.","ok")});
+  $("how").addEventListener("click",function(){
+    openModal("How routing works",'<p>Each proposed update runs through the active guardrails in order. The first failing rule decides the lane.</p><h4>Order of checks</h4><p>1. Evidence verified, then 2. schema validity. Failing either blocks the update.<br>3. Confidence threshold, 4. protected field, 5. overwrite. Failing any of these sends the update to a human.<br>Updates that pass everything are applied automatically.</p><h4>Try this</h4><p>Switch guardrails to None and reveal the ground truth. Then turn rules on one at a time and watch which wrong updates each one stops, and which correct ones it holds back.</p>');
+  });
+  document.querySelectorAll("[data-sc]").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll("[data-sc]").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");setScenario(b.dataset.sc)})});
+  document.querySelectorAll("[data-gp]").forEach(function(b){b.addEventListener("click",function(){setPreset(b.dataset.gp);syncPresetChips()})});
+
+  document.addEventListener("dragstart",function(e){var c=e.target.closest&&e.target.closest(".ucard");if(!c)return;e.dataTransfer.setData("text/plain",c.dataset.id);e.dataTransfer.effectAllowed="move"});
+  document.addEventListener("dragover",function(e){var l=e.target.closest&&e.target.closest(".lane");if(!l)return;e.preventDefault();e.dataTransfer.dropEffect="move";l.classList.add("over")});
+  document.addEventListener("dragleave",function(e){var l=e.target.closest&&e.target.closest(".lane");if(l&&!l.contains(e.relatedTarget))l.classList.remove("over")});
+  document.addEventListener("drop",function(e){
+    var l=e.target.closest&&e.target.closest(".lane");if(!l)return;e.preventDefault();l.classList.remove("over");
+    var id=e.dataTransfer.getData("text/plain"), x=state().filter(function(s){return s.u.id===id})[0];
+    if(x&&x.lane!==l.dataset.lane)moveTo(id,l.dataset.lane);
+  });
+  document.addEventListener("dragend",function(){document.querySelectorAll(".over").forEach(function(x){x.classList.remove("over")})});
+
+  render();syncPresetChips();
+})();
+</script>
+</body>
+</html>

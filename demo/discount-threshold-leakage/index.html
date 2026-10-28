@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce CPQ: Discount Leakage at Approval Thresholds | Andres Videla</title>
+<meta name="description" content="An interactive analysis of a year of fictional quote lines that finds discounts bunching just under approval thresholds, by rep, product and timing, and shows how to run the same method on real CPQ data.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Salesforce CPQ: Discount Leakage at Approval Thresholds">
+<meta property="og:url" content="https://andres-videla.com/demo/discount-threshold-leakage/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Find where discounts pile up just under an approval threshold, which reps and products drive it, and what the data can and cannot prove.">
+<meta property="og:image" content="https://andres-videla.com/assets/discount-leakage-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6;
+  --accent:#2F4B6E; --ok:#2E7D5B; --warn:#B26A1F; --bad:#B23A2E; --grey:#98A2B3; --bar:#7C93B3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+    --accent:#8FB3E6; --ok:#5CC498; --warn:#E5A15F; --bad:#EE7B6E; --grey:#6B7788; --bar:#5E7CA6; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+  --accent:#8FB3E6; --ok:#5CC498; --warn:#E5A15F; --bad:#EE7B6E; --grey:#6B7788; --bar:#5E7CA6; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.back{color:var(--accent);display:inline-block;margin-bottom:14px;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 48px}
+h1{font:700 clamp(1.7rem,3.6vw,2.5rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:50rem;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px;min-width:0}
+.card h2{font:700 12px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.card h3{font:700 12px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:18px 0 8px}
+.ctl{margin-bottom:14px}
+.ctl .row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:2px}
+.ctl .row b{font-family:var(--mono)}
+.ctl small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:6px 12px;border-radius:99px;cursor:pointer;font:inherit;font-size:13.5px}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.btn.ghost{border-radius:6px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.seed{font:12px var(--mono);color:var(--muted)}
+.right{display:grid;gap:20px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px}
+.kpi{background:var(--panel);border-radius:6px;padding:9px 11px}
+.kpi small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.kpi b{font:700 21px var(--serif);font-variant-numeric:tabular-nums}
+.kpi.bad b{color:var(--bad)} .kpi.warn b{color:var(--warn)} .kpi.good b{color:var(--ok)}
+.insight{margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--panel);font-size:14.5px;border-left:3px solid var(--grey)}
+.insight.bad{border-left-color:var(--bad)} .insight.warn{border-left-color:var(--warn)} .insight.good{border-left-color:var(--ok)}
+svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--rule);stroke-width:1} .gr{stroke:var(--rule);stroke-dasharray:2 4}
+.tk{fill:var(--muted);font:11px var(--sans)} .tl{font:600 11.5px var(--sans)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.leg i{display:inline-block;width:12px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--rule);font-weight:700}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+td{padding:7px 8px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--sans);font-size:14px}
+td.l{font-family:var(--sans)}
+.meter{display:inline-block;height:8px;border-radius:2px;background:var(--bar);vertical-align:middle;margin-right:6px}
+.meter.hot{background:var(--warn)}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11.5px;background:rgba(178,106,31,.16);color:var(--warn)}
+.help{font-size:13px;color:var(--muted);margin:8px 0 0}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.real h2{margin-bottom:8px}
+.real p{margin:0 0 10px;font-size:14.5px}
+.real ul{margin:0 0 10px;padding-left:18px;font-size:14px}
+.real li{margin-bottom:4px}
+code{font:12.5px var(--mono);background:var(--panel);padding:1px 5px;border-radius:3px}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:16px}
+.foot p{margin:0 0 6px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+@media (max-width:480px){.wrap{padding:16px 14px 40px}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative analysis of fictional quote lines. No real systems, data or vendor APIs are involved, and the behavior in the data is simulated to show the method.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce CPQ: discount leakage at approval thresholds</h1>
+  <p class="dek">When a discount above 10% needs a manager and above 20% needs Finance, some discounts land just under the line. This is a year of fictional quote lines. Slice them, move the lines, and see where discounts bunch, who drives it and what the data cannot prove.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Where to look</h2>
+      <div class="ctl"><div class="row"><label for="t1">Threshold 1</label><b id="o_t1"></b></div><input id="t1" type="range" min="6" max="25" step="1"><small>Discount at or above this needs a manager.</small></div>
+      <div class="ctl"><div class="row"><label for="t2">Threshold 2</label><b id="o_t2"></b></div><input id="t2" type="range" min="12" max="35" step="1"><small>Discount at or above this needs Finance.</small></div>
+      <div class="actions" style="margin-top:0;margin-bottom:14px"><button class="btn ghost" id="snap">Snap to the policy in force</button></div>
+      <p class="help" style="margin:0 0 14px">The policy when these lines were written was 10% and 20%. Move the lines elsewhere and the bunching disappears, which is the control test.</p>
+      <h3>Product</h3>
+      <div class="seg" id="prodseg" role="group" aria-label="Product filter"></div>
+      <h3>Timing</h3>
+      <div class="seg" id="timeseg" role="group" aria-label="Timing filter"></div>
+      <div class="actions"><button class="btn ghost" id="reseed">New random year</button><span class="seed" id="seedlab"></span></div>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2>Distribution of discounts on quote lines</h2>
+        <svg id="hist" viewBox="0 0 720 300" role="img" aria-label="Histogram of line discounts with approval thresholds marked"></svg>
+        <div class="leg"><span><i style="background:var(--bar)"></i>Lines per point of discount</span><span><i style="background:var(--warn)"></i>The two points just under a threshold</span><span><i style="border:1.5px dashed var(--bad);background:transparent"></i>Approval threshold</span></div>
+        <p class="help" id="histhelp"></p>
+      </div>
+
+      <div class="card">
+        <h2>What the lines show</h2>
+        <div class="kpis" id="kpis"></div>
+        <div class="insight" id="insight" aria-live="polite"></div>
+      </div>
+
+      <div class="card">
+        <h2>Reps by share of discounts just under a threshold</h2>
+        <div class="scroll"><table><thead><tr><th>Rep</th><th>Discounted lines</th><th>Just under</th><th class="l">Share of their lines</th><th class="l">Quarter-end lines</th><th class="l"></th></tr></thead><tbody id="rows"></tbody></table></div>
+        <p class="help">A rep is marked for review when the share is at least 1.5 times the team median and at least 30% of their discounted lines.</p>
+      </div>
+
+      <div class="card real">
+        <h2>What the data can and cannot say</h2>
+        <p>Bunching is a signal, not a verdict. A cluster just under 10% can also come from a price-book tier, a standing channel agreement or a deal desk playbook that sets discounts at 9.5%. Review the quotes before drawing conclusions about anyone.</p>
+        <h2 style="margin-top:14px">Running this on a real org</h2>
+        <ul>
+          <li>Export 12 to 24 months of quote lines. In CPQ, the line discount, list price, net price, product family and created date are normally on <code>SBQQ__QuoteLine__c</code>, and the approver on the Advanced Approvals objects. Confirm the field names in your org.</li>
+          <li>Read the real thresholds from the approval rules instead of assuming them, because rules often use amount and discount together.</li>
+          <li>Exclude lines whose discount is contractual or comes from a price book tier, or the analysis will blame the policy for what the contract requires.</li>
+          <li>The ratio here is a transparent heuristic. With real data, add a proper test for excess mass at the threshold before showing a rep or a manager any result.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p>Salesforce and other product names are trademarks of their respective owners. This page is not affiliated with or endorsed by any vendor.</p>
+    <p><a href="/portfolio/" class="back">Back to portfolio</a></p>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const REPS=['Avery','Blake','Casey','Devon','Emery','Finley','Gray','Harper','Indy','Jules','Kai','Lane'];
+const GAME=[.05,.8,.35,.05,.75,.05,.35,.05,.7,.05,.35,.05];
+const PRODS=['Core platform','Add-ons','Services'];
+const F={prod:'All',time:'All'},T={t1:10,t2:20};
+let seed=36,DATA=[];
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function build(seed){
+  const r=rng(seed),norm=()=>{let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+  const out=[];
+  for(let i=0;i<760;i++){
+    const rep=Math.floor(r()*12),x=r(),prod=x<.6?0:x<.85?1:2,qe=r()<.3;
+    const mean=[12,8,5][prod]+(qe?3:0);
+    let d=r()<(qe?.1:.2)?0:Math.max(0,mean+norm()*6);
+    if(d>0)for(const th of [10,20]){
+      if(d>=th&&d<th+4&&r()<GAME[rep]*(qe?1.25:1)&&prod<2)d=th-.1-r()*1.8;
+    }
+    d=Math.round(d*10)/10;
+    out.push({rep,prod,qe,d,list:Math.round(Math.exp(Math.log(25000)+.7*norm())/100)*100});
+  }
+  return out;
+}
+const sel=()=>DATA.filter(l=>(F.prod==='All'||PRODS[l.prod]===F.prod)&&(F.time==='All'||(F.time==='Quarter end'?l.qe:!l.qe)));
+const cnt=(ls,a,b)=>ls.filter(l=>l.d>0&&l.d>=a&&l.d<b).length;
+function bunch(ls,t){
+  const obs=cnt(ls,t-2,t),base=(cnt(ls,t-6,t-2)/2+cnt(ls,t+2,t+6)/2)/2,above=cnt(ls,t,t+2);
+  return {obs,base,above,ratio:base>0?obs/base:(obs?99:1)};
+}
+function ns(n,a,t){const e=document.createElementNS('http://www.w3.org/2000/svg',n);for(const k in a){if(k==='fill'||k==='stroke')e.style[k]=a[k];else e.setAttribute(k,a[k])}if(t!=null)e.textContent=t;return e}
+function inBand(d){return d>0&&((d>=T.t1-2&&d<T.t1)||(d>=T.t2-2&&d<T.t2))}
+function drawHist(ls){
+  const svg=$('hist');svg.innerHTML='';
+  const W=720,H=300,Lm=40,Rm=12,Tm=16,Bm=36,maxD=40;
+  const bins=Array.from({length:maxD},(_,k)=>cnt(ls,k,k+1));
+  const mx=Math.max(8,...bins)*1.12,X=k=>Lm+(W-Lm-Rm)*k/maxD,Y=v=>Tm+(H-Tm-Bm)*(1-v/mx);
+  for(let i=0;i<=4;i++){const v=mx*i/4;svg.append(ns('line',{class:i?'gr':'ax',x1:Lm,x2:W-Rm,y1:Y(v),y2:Y(v)}),ns('text',{class:'tk',x:Lm-6,y:Y(v)+4,'text-anchor':'end'},Math.round(v)))}
+  for(let k=0;k<=maxD;k+=5)svg.append(ns('text',{class:'tk',x:X(k),y:H-18,'text-anchor':'middle'},k+'%'));
+  svg.append(ns('text',{class:'tk',x:W-Rm,y:H-3,'text-anchor':'end'},'Discount on the line'));
+  const bw=(W-Lm-Rm)/maxD;
+  bins.forEach((v,k)=>{
+    const hot=(k>=T.t1-2&&k<T.t1)||(k>=T.t2-2&&k<T.t2);
+    svg.append(ns('rect',{x:X(k)+1,y:Y(v),width:bw-2,height:Math.max(0,Y(0)-Y(v)),rx:1.5,fill:hot?'var(--warn)':'var(--bar)'}));
+  });
+  [[T.t1,'Manager'],[T.t2,'Finance']].forEach(([t,n])=>{
+    svg.append(ns('line',{x1:X(t),x2:X(t),y1:Tm,y2:H-Bm,stroke:'var(--bad)','stroke-dasharray':'5 4','stroke-width':1.5}));
+    svg.append(ns('text',{class:'tl',x:X(t)+5,y:Tm+10,fill:'var(--bad)'},n+' at '+t+'%'));
+  });
+}
+function render(){
+  $('o_t1').textContent=T.t1+'%';$('o_t2').textContent=T.t2+'%';
+  ['t1','t2'].forEach(k=>{if($(k).value!=T[k])$(k).value=T[k]});
+  $('seedlab').textContent='Year #'+seed;
+  document.querySelectorAll('#prodseg .btn').forEach(b=>b.classList.toggle('on',b.dataset.v===F.prod));
+  document.querySelectorAll('#timeseg .btn').forEach(b=>b.classList.toggle('on',b.dataset.v===F.time));
+  const ls=sel(),disc=ls.filter(l=>l.d>0),b1=bunch(ls,T.t1),b2=bunch(ls,T.t2);
+  const nBand=disc.filter(l=>inBand(l.d)).length,share=disc.length?nBand/disc.length:0;
+  const expected=disc.length?(b1.base+b2.base)/disc.length:0;
+  const dollars=disc.filter(l=>inBand(l.d)).reduce((s,l)=>s+l.list*l.d/100,0);
+  const needApp=disc.filter(l=>l.d>=T.t1).length;
+  const sign=(r)=>r>=1.5?'bad':r>=1.25?'warn':'good';
+  $('kpis').innerHTML=[
+    ['Quote lines',ls.length.toLocaleString('en-US'),''],
+    ['Lines needing approval',(disc.length?needApp/disc.length*100:0).toFixed(0)+'%',''],
+    ['Bunching below '+T.t1+'%',b1.ratio>=99?'High':b1.ratio.toFixed(1)+'x',sign(b1.ratio)],
+    ['Bunching below '+T.t2+'%',b2.ratio>=99?'High':b2.ratio.toFixed(1)+'x',sign(b2.ratio)],
+    ['Discount in the bands','$'+Math.round(dollars/1000).toLocaleString('en-US')+'k','']
+  ].map(([a,b,c])=>`<div class="kpi ${c}"><small>${a}</small><b>${b}</b></div>`).join('');
+  drawHist(ls);
+  // reps
+  const rows=REPS.map((n,i)=>{const r=disc.filter(l=>l.rep===i),b=r.filter(l=>inBand(l.d)).length;return {n,i,N:r.length,b,s:r.length?b/r.length:0,qe:r.length?r.filter(l=>l.qe).length/r.length:0}});
+  const shares=rows.filter(x=>x.N>=15).map(x=>x.s).sort((a,b)=>a-b),med=shares.length?shares[Math.floor(shares.length/2)]:0;
+  rows.forEach(x=>x.flag=x.N>=15&&x.s>=Math.max(1.5*med,.3));
+  const sorted=[...rows].sort((a,b)=>b.s-a.s),flagged=sorted.filter(x=>x.flag);
+  $('rows').innerHTML=sorted.map(x=>`<tr><td>${x.n}</td><td>${x.N}</td><td>${x.b}</td><td class="l"><span class="meter ${x.flag?'hot':''}" style="width:${Math.round(x.s*160)}px"></span>${(x.s*100).toFixed(0)}%</td><td class="l">${(x.qe*100).toFixed(0)}%</td><td class="l">${x.flag?'<span class="tag">Review</span>':''}</td></tr>`).join('');
+  // text
+  const atPolicy=T.t1===10&&T.t2===20,flaggedBand=flagged.reduce((s,x)=>s+x.b,0);
+  const qeLs=DATA.filter(l=>l.qe&&(F.prod==='All'||PRODS[l.prod]===F.prod)),rest=DATA.filter(l=>!l.qe&&(F.prod==='All'||PRODS[l.prod]===F.prod));
+  const rq=bunch(qeLs,T.t1).ratio,rr=bunch(rest,T.t1).ratio;
+  const ins=$('insight');let txt='';
+  if(!disc.length){txt='There are no discounted lines in this slice.';ins.className='insight'}
+  else{
+    txt=nBand+' of '+disc.length+' discounted lines ('+(share*100).toFixed(0)+'%) sit in the two points just under a threshold, against about '+(expected*100).toFixed(0)+'% that a smooth distribution would put there. ';
+    if(flagged.length)txt+=flagged.length+(flagged.length===1?' rep accounts':' reps account')+' for '+(nBand?Math.round(flaggedBand/nBand*100):0)+'% of them. ';
+    if(F.time==='All'&&rq<99&&rr<99)txt+='Just under '+T.t1+'%, the ratio is '+rq.toFixed(1)+'x at quarter end against '+rr.toFixed(1)+'x the rest of the quarter.';
+    ins.className='insight '+(b1.ratio>=1.5||b2.ratio>=1.5?'bad':b1.ratio>=1.25||b2.ratio>=1.25?'warn':'good');
+  }
+  ins.textContent=txt;
+  $('histhelp').textContent=atPolicy?'The amber bars hold the discounts that avoid an approval by a hair. A smooth distribution would not drop right after each line.':'These lines are not where the policy sits, so there is nothing to bunch against. That is the control: the pile-up is tied to the real thresholds, not to the shape of the data.';
+}
+['t1','t2'].forEach(k=>$(k).addEventListener('input',e=>{T[k]=+e.target.value;render()}));
+$('snap').onclick=()=>{T.t1=10;T.t2=20;render()};
+['All',...PRODS].forEach(v=>{const b=document.createElement('button');b.className='btn';b.dataset.v=v;b.textContent=v;b.onclick=()=>{F.prod=v;render()};$('prodseg').append(b)});
+['All','Quarter end','Rest of quarter'].forEach(v=>{const b=document.createElement('button');b.className='btn';b.dataset.v=v;b.textContent=v;b.onclick=()=>{F.time=v;render()};$('timeseg').append(b)});
+$('reseed').onclick=()=>{seed=Math.floor(Math.random()*9000)+1;DATA=build(seed);render()};
+DATA=build(seed);render();
+</script>
+</body>
+</html>

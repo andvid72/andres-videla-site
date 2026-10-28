@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce CPQ: Price Waterfall and Approval Route Demo | Andres Videla</title>
+<meta name="description" content="An interactive demo with fictional data: change a deal and watch the price waterfall, the approval route and the quarter forecast respond.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Salesforce CPQ: Price Waterfall and Approval Route Demo">
+<meta property="og:url" content="https://andres-videla.com/demo/price-waterfall/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="An interactive demo with fictional data: change a deal and watch the price waterfall, the approval route and the quarter forecast respond.">
+<meta property="og:image" content="https://andres-videla.com/assets/price-waterfall-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#fff; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6;
+  --accent:#2F4B6E; --warn:#9A4A1F; --good:#2E7D5B; --bad:#B23A2E; --line:#8A96A8;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+.banner{background:#FFF4DC;color:#6A4B00;border-bottom:1px solid #ECD9A0;text-align:center;font-size:13px;padding:7px 16px}
+.banner a{color:#6A4B00}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 56px}
+h1{font:700 clamp(1.7rem,3.6vw,2.4rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);margin:0 0 22px;max-width:46rem}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.presets span{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);align-self:center;margin-right:4px}
+.pbtn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:6px 14px;border-radius:99px;cursor:pointer;font:inherit;font-size:14px}
+.pbtn:hover{border-color:var(--accent)}
+.pbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.layout{display:grid;grid-template-columns:300px minmax(0,1fr);gap:22px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:18px}
+.card h2{font:700 12px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+.ctl{margin-bottom:18px}
+.ctl:last-child{margin-bottom:0}
+.ctl .row{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;margin-bottom:4px}
+.ctl .row b{font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.ctl small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+.right{display:grid;gap:22px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px}
+.kpi{background:var(--panel);border-radius:6px;padding:10px 12px}
+.kpi small{display:block;color:var(--muted);font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+.kpi b{font:700 22px var(--serif);font-variant-numeric:tabular-nums}
+.kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--good)}
+svg{display:block;width:100%;height:auto}
+.axis{stroke:var(--rule);stroke-width:1}
+.grid{stroke:var(--rule);stroke-width:1;stroke-dasharray:2 4}
+.tick{fill:var(--muted);font:11px var(--sans)}
+.lab{fill:var(--ink);font:600 12px var(--sans);text-anchor:middle}
+.sub{fill:var(--muted);font:11px var(--sans);text-anchor:middle}
+.val{font:600 12px var(--sans);text-anchor:middle;font-variant-numeric:tabular-nums}
+.floor{stroke:var(--warn);stroke-width:1.5;stroke-dasharray:6 4}
+.cost{stroke:var(--line);stroke-width:1.5;stroke-dasharray:1 4;stroke-linecap:round}
+.flab{fill:var(--warn);font:600 11px var(--sans)}
+.clab{fill:var(--muted);font:11px var(--sans)}
+/* route */
+.route{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;row-gap:12px}
+.step{flex:1 1 120px;min-width:110px;border:1px solid var(--rule);border-radius:6px;padding:10px;background:var(--surface);transition:all .35s;position:relative}
+.step .t{font-weight:600;font-size:14px}
+.step .s{font-size:12px;color:var(--muted)}
+.step .why{font-size:11.5px;color:var(--warn);margin-top:6px;min-height:1em}
+.step.skip{opacity:.42;background:var(--panel);border-style:dashed}
+.step.act{border-color:var(--accent);box-shadow:0 0 0 2px rgba(47,75,110,.15)}
+.step.run{border-color:var(--warn);background:#FFF6EE;animation:pulse 1s infinite}
+.step.done{border-color:var(--good);background:#EEF8F3}
+.step.done .t::after{content:" \2713";color:var(--good)}
+.link{flex:0 0 22px;align-self:center;height:2px;background:var(--rule);position:relative;transition:background .35s}
+.link.act{background:var(--accent)}
+.link.act::after{content:"";position:absolute;right:-1px;top:-4px;border:5px solid transparent;border-left:7px solid var(--accent)}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(154,74,31,.2)}}
+.routebar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:14px}
+.sla{font-size:14px;color:var(--muted)} .sla b{color:var(--ink)}
+.go{border:0;background:var(--accent);color:#fff;border-radius:6px;padding:8px 16px;font:600 14px var(--sans);cursor:pointer}
+.go:disabled{opacity:.5;cursor:not-allowed}
+/* gauge */
+.gauge{height:26px;background:var(--panel);border-radius:4px;position:relative;overflow:hidden}
+.gauge i{position:absolute;top:0;bottom:0;transition:width .5s,left .5s}
+.g1{background:var(--line)} .g2{background:var(--accent)}
+.g2.slip{background:repeating-linear-gradient(45deg,#C9A58F,#C9A58F 6px,#E9D8CC 6px,#E9D8CC 12px)}
+.gline{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.glegend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted);margin-top:10px}
+.glegend b{color:var(--ink)}
+.msg{margin-top:12px;padding:9px 12px;border-radius:6px;font-size:14px;background:var(--panel)}
+.msg.warn{background:#FFF0E4;color:#7A3A12} .msg.ok{background:#EAF6F0;color:#1F5C42}
+.foot{color:var(--muted);font-size:13px;margin-top:22px}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.step,.link,.gauge i{transition:none}.step.run{animation:none}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="banner">Interactive demo. All names, prices and rules are invented, and nothing connects to a real system. <a href="/portfolio/">Back to portfolio</a></div>
+<div class="wrap">
+  <h1>Price waterfall and approval route</h1>
+  <p class="dek">Change the deal on the left. The waterfall shows where the list price goes, the route shows who has to approve it, and the forecast shows whether the approval clock fits inside the quarter.</p>
+  <div class="presets" id="presets"><span>Try a deal</span></div>
+
+  <div class="layout">
+    <div class="card" id="controls">
+      <h2>Deal</h2>
+      <div class="ctl"><div class="row"><label for="seats">Seats</label><b id="o_seats"></b></div><input id="seats" type="range" min="5" max="500" step="5"><small id="tiernote"></small></div>
+      <div class="ctl"><div class="row"><label for="term">Term (months)</label><b id="o_term"></b></div><input id="term" type="range" min="12" max="60" step="12"></div>
+      <div class="ctl"><div class="row"><label for="partner">Partner discount</label><b id="o_partner"></b></div><input id="partner" type="range" min="0" max="15" step="1"></div>
+      <div class="ctl"><div class="row"><label for="neg">Negotiated discount</label><b id="o_neg"></b></div><input id="neg" type="range" min="0" max="35" step="1"></div>
+      <div class="ctl"><div class="row"><label for="special">Special discount</label><b id="o_special"></b></div><input id="special" type="range" min="0" max="10" step="5"></div>
+      <div class="ctl"><div class="row"><label for="days">Business days left in quarter</label><b id="o_days"></b></div><input id="days" type="range" min="1" max="45" step="1"></div>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2>Price waterfall (annual contract value)</h2>
+        <div class="kpis" id="kpis"></div>
+        <svg id="wf" viewBox="0 0 720 330" role="img" aria-label="Waterfall chart from list price to net price"></svg>
+      </div>
+      <div class="card">
+        <h2>Approval route</h2>
+        <div class="route" id="route"></div>
+        <div class="routebar"><div class="sla" id="sla"></div><button class="go" id="go">Submit and watch</button></div>
+      </div>
+      <div class="card">
+        <h2>Quarter forecast</h2>
+        <div class="gauge" id="gauge"><i class="g1" id="g1"></i><i class="g2" id="g2"></i><span class="gline" id="gline"></span></div>
+        <div class="glegend" id="glegend"></div>
+        <div class="msg" id="gmsg"></div>
+      </div>
+    </div>
+  </div>
+  <p class="foot">Rules in this demo: blended discount over 15% needs a manager, over 25% needs Finance. Margin under 50% needs Finance. Net price under the floor, or a total contract value over $250,000, needs a VP. Terms over 36 months need Legal.</p>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const LIST=1200, COST=.38, FLOOR=.55, TARGET=400000, BOOKED=210000;
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+const k=n=>n>=1e6?'$'+(n/1e6).toFixed(1)+'M':'$'+Math.round(n/1000)+'k';
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+const PRESETS={
+ 'Standard renewal':{seats:40,term:12,partner:0,neg:5,special:0,days:30},
+ 'Competitive deal':{seats:120,term:24,partner:5,neg:18,special:0,days:12},
+ 'Strategic multi-year':{seats:300,term:48,partner:10,neg:20,special:10,days:6}
+};
+const S={...PRESETS['Competitive deal']};
+const tier=s=>s>=250?15:s>=100?10:s>=25?5:0;
+
+function calc(s){
+  const list=s.seats*LIST, t=tier(s.seats);
+  const steps=[t,s.partner,s.neg,s.special];
+  const lv=[list]; steps.forEach(p=>lv.push(lv[lv.length-1]*(1-p/100)));
+  const net=lv[4], disc=1-net/list, margin=1-(list*COST)/net;
+  return {list,lv,net,disc,margin,tcv:net*s.term/12,term:s.term,floor:list*FLOOR,cost:list*COST};
+}
+const NODES=[
+ {id:'mgr',name:'Sales manager',sla:4},
+ {id:'fin',name:'Finance',sla:8},
+ {id:'vp',name:'VP Sales',sla:24},
+ {id:'leg',name:'Legal',sla:48}
+];
+const RULES=[
+ {n:'mgr',t:m=>m.disc>.15,w:m=>'Discount '+(m.disc*100).toFixed(0)+'% > 15%'},
+ {n:'fin',t:m=>m.disc>.25,w:m=>'Discount '+(m.disc*100).toFixed(0)+'% > 25%'},
+ {n:'fin',t:m=>m.margin<.5,w:m=>'Margin '+(m.margin*100).toFixed(0)+'% < 50%'},
+ {n:'vp',t:m=>m.net<m.floor,w:m=>'Net below price floor'},
+ {n:'vp',t:m=>m.tcv>250000,w:m=>'TCV '+k(m.tcv)+' > $250k'},
+ {n:'leg',t:m=>m.term>36,w:m=>'Term '+m.term+' months > 36'}
+];
+function route(m){
+  const why={}; RULES.forEach(r=>{if(r.t(m))(why[r.n]=why[r.n]||[]).push(r.w(m))});
+  const need=NODES.filter(n=>why[n.id]);
+  const hours=need.reduce((a,n)=>a+n.sla,0);
+  return {why,need,hours,days:Math.ceil(hours/8)};
+}
+
+/* ---------- waterfall (tweened) ---------- */
+const NS='http://www.w3.org/2000/svg';
+let cur=null, tgt=null, raf=0;
+const W=720,H=330,L=54,R=14,T=26,B=58;
+const cols=['List price','Volume tier','Partner','Negotiated','Special','Net price'];
+function tween(){
+  cancelAnimationFrame(raf);
+  if(reduce||!cur){cur=tgt.slice();draw();return}
+  const step=()=>{
+    let moving=false;
+    cur=cur.map((c,i)=>{const d=tgt[i]-c;if(Math.abs(d)<.5)return tgt[i];moving=true;return c+d*.22});
+    draw(); if(moving)raf=requestAnimationFrame(step);
+  };
+  raf=requestAnimationFrame(step);
+}
+function el(n,a,txt){const e=document.createElementNS(NS,n);for(const k in a){if(k==='fill'||k==='stroke')e.style[k]=a[k];else e.setAttribute(k,a[k])}if(txt!=null)e.textContent=txt;return e}
+function draw(){
+  const m=calc(S), svg=$('wf'); svg.innerHTML='';
+  const max=cur[0]*1.04, y=v=>T+(H-T-B)*(1-v/max);
+  const cw=(W-L-R)/6, bw=cw*.62;
+  [0,.25,.5,.75,1].forEach(f=>{const v=cur[0]*f;svg.append(el('line',{class:f?'grid':'axis',x1:L,x2:W-R,y1:y(v),y2:y(v)}),el('text',{class:'tick',x:L-8,y:y(v)+4,'text-anchor':'end'},k(v)))});
+  const floor=cur[0]*FLOOR, cost=cur[0]*COST;
+  svg.append(el('line',{class:'floor',x1:L,x2:W-R,y1:y(floor),y2:y(floor)}),el('text',{class:'flab',x:L+cw*3,y:y(floor)-5,'text-anchor':'middle'},'Price floor '+k(floor)));
+  svg.append(el('line',{class:'cost',x1:L,x2:W-R,y1:y(cost),y2:y(cost)}),el('text',{class:'clab',x:L+cw*3,y:y(cost)-5,'text-anchor':'middle'},'Cost to serve '+k(cost)));
+  cols.forEach((c,i)=>{
+    const x=L+i*cw+(cw-bw)/2, mid=x+bw/2;
+    let top,bot,fill,label;
+    if(i===0){top=cur[0];bot=0;fill='var(--accent)';label=k(top)}
+    else if(i===5){top=cur[4];bot=0;fill=cur[4]<floor?'var(--bad)':'var(--good)';label=k(top)}
+    else{top=cur[i-1];bot=cur[i];fill='var(--warn)';label='-'+k(top-bot)}
+    svg.append(el('rect',{x,y:y(top),width:bw,height:Math.max(1,y(bot)-y(top)),fill,rx:2}));
+    svg.append(el('text',{class:'val',x:mid,y:y(top)-6,fill:fill},label));
+    svg.append(el('text',{class:'lab',x:mid,y:H-34},c));
+    let sub='';
+    if(i===1)sub=tier(S.seats)+'%'; if(i===2)sub=S.partner+'%'; if(i===3)sub=S.neg+'%'; if(i===4)sub=S.special+'%';
+    if(i===0)sub=S.seats+' seats'; if(i===5)sub=(m.disc*100).toFixed(1)+'% off list';
+    svg.append(el('text',{class:'sub',x:mid,y:H-18},sub));
+    if(i>0&&i<5){const nx=x+bw;svg.append(el('line',{x1:nx,x2:nx+(cw-bw),y1:y(cur[i]),y2:y(cur[i]),stroke:'var(--line)','stroke-dasharray':'2 3'}))}
+  });
+}
+
+/* ---------- UI ---------- */
+function renderKpis(m){
+  const bad=m.net<m.floor;
+  $('kpis').innerHTML=[
+   ['Net ACV',money(m.net),bad?'bad':'good'],
+   ['TCV ('+S.term+' mo)',money(m.tcv),''],
+   ['Blended discount',(m.disc*100).toFixed(1)+'%',m.disc>.25?'bad':''],
+   ['Gross margin',(m.margin*100).toFixed(0)+'%',m.margin<.5?'bad':'good']
+  ].map(([a,b,c])=>`<div class="kpi ${c}"><small>${a}</small><b>${b}</b></div>`).join('');
+}
+function renderRoute(m,r){
+  let h='<div class="step act"><div class="t">Rep submits</div><div class="s">Quote ready</div></div>';
+  NODES.forEach(n=>{
+    const on=!!r.why[n.id];
+    h+=`<div class="link ${on?'act':''}"></div><div class="step ${on?'act':'skip'}" id="n_${n.id}"><div class="t">${n.name}</div><div class="s">${on?'SLA '+n.sla+' h':'Not required'}</div><div class="why">${on?r.why[n.id].join('<br>'):''}</div></div>`;
+  });
+  h+=`<div class="link ${r.need.length?'act':''}"></div><div class="step ${r.need.length?'act':'done'}" id="n_end"><div class="t">Booked</div><div class="s">${r.need.length?'After approvals':'Auto-approved'}</div></div>`;
+  $('route').innerHTML=h;
+  $('sla').innerHTML=r.need.length?`Estimated wait: <b>${r.hours} business hours</b> (about <b>${r.days} business day${r.days>1?'s':''}</b>), ${r.need.length} approver${r.need.length>1?'s':''} in sequence.`:'<b>No approval needed.</b> No rule applies to this deal.';
+}
+function renderGauge(m,r){
+  const slip=r.days>S.days, add=slip?0:m.net;
+  const p=v=>Math.min(100,v/TARGET*100);
+  $('g1').style.left='0';$('g1').style.width=p(BOOKED)+'%';
+  const g2=$('g2');g2.style.left=p(BOOKED)+'%';g2.style.width=Math.min(100-p(BOOKED),(slip?m.net:m.net)/TARGET*100)+'%';
+  g2.classList.toggle('slip',slip);
+  $('gline').style.left='calc('+(100)+'% - 2px)';
+  const total=BOOKED+add;
+  $('glegend').innerHTML=`<span>Already booked <b>${money(BOOKED)}</b></span><span>This deal <b>${money(m.net)}</b>${slip?' (slips)':''}</span><span>Quarter total <b>${money(total)}</b> of <b>${money(TARGET)}</b> target</span>`;
+  const g=$('gmsg');
+  if(slip){g.className='msg warn';g.textContent='The approval needs about '+r.days+' business days and only '+S.days+' remain. This deal likely slips to next quarter. Reduce the discount or the term to shorten the route.'}
+  else if(total>=TARGET){g.className='msg ok';g.textContent='With this deal the quarter reaches '+((total/TARGET)*100).toFixed(0)+'% of target, and the approval fits in the time left.'}
+  else{g.className='msg';g.textContent='The approval fits in the time left. The quarter would be at '+((total/TARGET)*100).toFixed(0)+'% of target with this deal.'}
+}
+function update(){
+  stopRun();
+  const m=calc(S), r=route(m);
+  ['seats','term','partner','neg','special','days'].forEach(id=>{ if($(id).value!=S[id])$(id).value=S[id] });
+  $('o_seats').textContent=S.seats;$('o_term').textContent=S.term;$('o_partner').textContent=S.partner+'%';$('o_neg').textContent=S.neg+'%';$('o_special').textContent=S.special+'%';$('o_days').textContent=S.days;
+  $('tiernote').textContent='Volume tier at this size: '+tier(S.seats)+'% off list';
+  tgt=[...m.lv];
+  renderKpis(m);renderRoute(m,r);renderGauge(m,r);tween();
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.toggle('on',JSON.stringify(PRESETS[b.dataset.k])===JSON.stringify(S)));
+  $('go').disabled=false;
+}
+['seats','term','partner','neg','special','days'].forEach(id=>$(id).addEventListener('input',e=>{S[id]=+e.target.value;update()}));
+Object.keys(PRESETS).forEach(k=>{const b=document.createElement('button');b.className='pbtn';b.dataset.k=k;b.textContent=k;b.onclick=()=>{Object.assign(S,PRESETS[k]);update()};$('presets').append(b)});
+
+/* simulate approvals */
+let timers=[];
+function stopRun(){timers.forEach(clearTimeout);timers=[]}
+$('go').onclick=()=>{
+  const m=calc(S), r=route(m); update();
+  if(!r.need.length){toast('Auto-approved. Booked.');return}
+  $('go').disabled=true; let t=0;
+  r.need.forEach((n,i)=>{
+    timers.push(setTimeout(()=>{const e=$('n_'+n.id);e.className='step run';e.querySelector('.s').textContent='Reviewing...'},t));
+    t+=Math.max(700,n.sla*40);
+    timers.push(setTimeout(()=>{const e=$('n_'+n.id);e.className='step done';e.querySelector('.s').textContent='Approved'},t));
+    t+=200;
+  });
+  timers.push(setTimeout(()=>{const e=$('n_end');const slip=r.days>S.days;e.className='step '+(slip?'run':'done');e.querySelector('.s').textContent=slip?'Booked next quarter':'Booked this quarter';$('go').disabled=false},t));
+};
+function toast(t){$('sla').innerHTML='<b>'+t+'</b>'}
+update();
+</script>
+</body>
+</html>

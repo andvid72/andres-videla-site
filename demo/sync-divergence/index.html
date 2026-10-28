@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workato and NetSuite: Sync Divergence Lab | Andres Videla</title>
+<meta name="description" content="An interactive simulation of how dropped, duplicated and out-of-order events make a CRM and an ERP disagree, and which safeguards bring them back together.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Workato and NetSuite: Sync Divergence Lab">
+<meta property="og:url" content="https://andres-videla.com/demo/sync-divergence/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Inject failures into a CRM to ERP sync, then switch on idempotency, ordering, dead-letter handling and reconciliation to see what each one fixes.">
+<meta property="og:image" content="https://andres-videla.com/assets/sync-divergence-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6;
+  --accent:#2F4B6E; --ok:#2E7D5B; --warn:#9A4A1F; --bad:#B23A2E; --purple:#6B4AA3; --blue:#2F6FB5; --grey:#98A2B3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+    --accent:#8FB3E6; --ok:#5CC498; --warn:#E5955F; --bad:#EE7B6E; --purple:#B79BE8; --blue:#74AEEA; --grey:#6B7788; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+  --accent:#8FB3E6; --ok:#5CC498; --warn:#E5955F; --bad:#EE7B6E; --purple:#B79BE8; --blue:#74AEEA; --grey:#6B7788; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.notice a,.back{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 48px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px}
+h1{font:700 clamp(1.7rem,3.6vw,2.5rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:48rem;margin:0 0 20px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:20px}
+.presets .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:99px;cursor:pointer;font:inherit;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.btn.solid{border-radius:6px;background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+.btn.ghost{border-radius:6px}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px;min-width:0}
+.card h2{font:700 12px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.card h3{font:700 12px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px}
+.ctl{margin-bottom:14px}
+.ctl .row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:2px}
+.ctl .row b{font-family:var(--mono)}
+input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.tg{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:14px;cursor:pointer}
+.tg input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.tg small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.seed{font:12px var(--mono);color:var(--muted);align-self:center}
+.right{display:grid;gap:20px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:10px}
+.kpi{background:var(--panel);border-radius:6px;padding:9px 11px}
+.kpi small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.kpi b{font:700 22px var(--serif);font-variant-numeric:tabular-nums}
+.kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--ok)} .kpi.warn b{color:var(--warn)}
+.insight{margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--panel);font-size:14.5px}
+.insight.bad{border-left:3px solid var(--bad)} .insight.good{border-left:3px solid var(--ok)} .insight.warn{border-left:3px solid var(--warn)}
+.strip{display:flex;flex-wrap:wrap;gap:4px;min-height:30px}
+.chip{width:34px;height:26px;border-radius:4px;font:600 10px var(--mono);display:flex;align-items:center;justify-content:center;color:#fff;border:1px solid transparent;cursor:default}
+.c-ok{background:var(--ok)} .c-late{background:var(--warn)} .c-dup{background:var(--bad)}
+.c-blk{background:transparent;border:1px dashed var(--grey);color:var(--muted)}
+.c-lost{background:transparent;border:1px solid var(--bad);color:var(--bad);text-decoration:line-through}
+.c-dlq{background:var(--purple)} .c-fix{background:var(--blue)}
+.chip.pop{animation:pop .25s ease-out}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--rule);font-weight:700}
+th:first-child,td:first-child{text-align:left}
+td{padding:8px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--sans);font-size:14px}
+td.diff{color:var(--bad);font-weight:700}
+td.st{text-align:left;font-family:var(--sans);font-size:12.5px}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11.5px;background:var(--panel);margin:1px 3px 1px 0;color:var(--muted)}
+.tag.ok{background:rgba(46,125,91,.15);color:var(--ok)} .tag.bad{background:rgba(178,58,46,.14);color:var(--bad)} .tag.fix{background:rgba(47,111,181,.15);color:var(--blue)}
+tr.flash td{animation:fl .5s}
+@keyframes fl{from{background:rgba(154,74,31,.25)}to{background:transparent}}
+svg{display:block;width:100%;height:auto}
+.s-axis{stroke:var(--rule);stroke-width:1} .s-lab{fill:var(--ink);font:12px var(--sans)} .s-val{fill:var(--muted);font:11px var(--mono)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+.help{font-size:13px;color:var(--muted);margin:0}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:16px}
+.foot p{margin:0 0 6px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}.two{grid-template-columns:1fr}}
+@media (max-width:480px){.wrap{padding:16px 14px 40px}}
+@media (prefers-reduced-motion:reduce){.chip.pop,tr.flash td{animation:none}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative simulation with fictional accounts. No real systems, data or vendor APIs are involved, and every rate is a model parameter, not a measurement.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Workato and NetSuite: sync divergence lab</h1>
+  <p class="dek">A CRM sends thirty billing events to an ERP through an integration layer. Inject failures, then switch on safeguards one at a time. Each safeguard fixes a different kind of divergence, and none of them fixes everything.</p>
+
+  <div class="presets" id="presets" role="group" aria-label="Scenarios"><span class="lbl">Scenario</span></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Failures to inject</h2>
+      <div class="ctl"><div class="row"><label for="drop">Dropped deliveries</label><b id="o_drop"></b></div><input id="drop" type="range" min="0" max="40" step="1"></div>
+      <div class="ctl"><div class="row"><label for="dup">Duplicate deliveries</label><b id="o_dup"></b></div><input id="dup" type="range" min="0" max="40" step="1"></div>
+      <div class="ctl"><div class="row"><label for="delay">Delayed deliveries</label><b id="o_delay"></b></div><input id="delay" type="range" min="0" max="50" step="1"></div>
+      <h3>Safeguards</h3>
+      <label class="tg"><input type="checkbox" id="idem"><span>Idempotency keys<small>The ERP remembers each event id and ignores repeats.</small></span></label>
+      <label class="tg"><input type="checkbox" id="order"><span>Ordered per account<small>Sequence numbers per account. Stale deliveries are discarded.</small></span></label>
+      <label class="tg"><input type="checkbox" id="retry"><span>Retry with dead-letter queue<small>Up to four attempts, then the event is parked and visible.</small></span></label>
+      <label class="tg"><input type="checkbox" id="recon"><span>Reconciliation job<small>Compares both systems after the run and repairs differences.</small></span></label>
+      <div class="actions">
+        <button class="btn solid" id="watch">Watch it happen</button>
+        <button class="btn ghost" id="reseed">New random world</button>
+        <span class="seed" id="seedlab"></span>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2>Outcome</h2>
+        <div class="kpis" id="kpis"></div>
+        <div class="insight" id="insight" aria-live="polite"></div>
+      </div>
+
+      <div class="card">
+        <h2>Event stream, in the order the ERP handled it</h2>
+        <div class="strip" id="strip" aria-label="Event outcomes"></div>
+        <div class="legend">
+          <span><i class="c-ok"></i>Applied</span>
+          <span><i class="c-late"></i>Applied late</span>
+          <span><i class="c-dup"></i>Duplicate applied</span>
+          <span><i class="c-blk"></i>Blocked</span>
+          <span><i class="c-lost"></i>Lost silently</span>
+          <span><i class="c-dlq"></i>Dead-letter queue</span>
+          <span><i class="c-fix"></i>Repaired</span>
+        </div>
+        <p class="help" style="margin-top:8px">Letters: I is an invoice, C is a credit, A is a plan amendment. Hover a chip for details.</p>
+      </div>
+
+      <div class="card">
+        <h2>Accounts: CRM versus ERP</h2>
+        <div class="scroll"><table id="tbl"><thead><tr><th>Account</th><th>CRM balance</th><th>ERP balance</th><th>CRM plan</th><th>ERP plan</th><th style="text-align:left">Status</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </div>
+
+      <div class="two">
+        <div class="card"><h2>Balance drift before any repair</h2><svg id="bars" viewBox="0 0 360 210" role="img" aria-label="Balance drift by account"></svg></div>
+        <div class="card"><h2>What the diff shows</h2><div id="causes"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p>Salesforce, Workato, NetSuite and other product names are trademarks of their respective owners. This page is not affiliated with or endorsed by any vendor.</p>
+    <p><a href="/portfolio/" class="back">Back to portfolio</a></p>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const pl=(n,w)=>n+' '+w+(n===1?'':'s');
+const money=n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('en-US');
+const signed=n=>(n>0?'+':n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const NAMES=['Alder Retail','Birch Health','Cedar Logistics','Dune Foods','Elm Capital','Fir Studio'];
+const PLANS=[1200,2400,4200,7800];
+const INIT=NAMES.map((n,i)=>({name:n,bal:10000,plan:PLANS[i%4]}));
+const PRESETS={
+  'Healthy network':{drop:0,dup:0,delay:0,idem:false,order:false,retry:false,recon:false},
+  'Flaky, no safeguards':{drop:15,dup:20,delay:30,idem:false,order:false,retry:false,recon:false},
+  'Only reconciliation':{drop:15,dup:20,delay:30,idem:false,order:false,retry:false,recon:true},
+  'Flaky, all safeguards':{drop:15,dup:20,delay:30,idem:true,order:true,retry:true,recon:true}
+};
+const P={...PRESETS['Flaky, no safeguards']};
+let seed=76, SIM=null, timer=null;
+
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function world(seed){
+  const r=rng(seed),seq={},ev=[];
+  for(let i=0;i<30;i++){
+    const a=Math.floor(r()*6);seq[a]=(seq[a]||0)+1;
+    const x=r(),type=x<.5?'invoice':x<.72?'credit':'amend';
+    ev.push({id:'E'+String(i+1).padStart(2,'0'),i,a,seq:seq[a],type,base:i*10,
+      amt:type==='invoice'?(1+Math.floor(r()*9))*500:type==='credit'?(1+Math.floor(r()*4))*250:0,
+      plan:type==='amend'?PLANS[Math.floor(r()*4)]:null,
+      rolls:{drop:[r(),r(),r(),r()],dup:r(),dupDelay:r(),delay:r(),delayAmt:r()}});
+  }
+  return ev;
+}
+const L=t=>t==='invoice'?'I':t==='credit'?'C':'A';
+const desc=e=>e.id+' '+(e.type==='invoice'?'invoice +'+money(e.amt):e.type==='credit'?'credit -'+money(e.amt):'amendment to plan '+money(e.plan))+' for '+NAMES[e.a]+' (sequence '+e.seq+')';
+function effect(s,e){ if(e.type==='invoice')s.bal+=e.amt; else if(e.type==='credit')s.bal-=e.amt; else s.plan=e.plan; }
+
+function simulate(events,P){
+  const drop=P.drop/100,dup=P.dup/100,delay=P.delay/100;
+  const truth=INIT.map(a=>({...a}));events.forEach(e=>effect(truth[e.a],e));
+  const log=[],deliveries=[],lostEv=[],dlqEv=[];
+  events.forEach(e=>{
+    const attempts=P.retry?4:1;let ok=-1;
+    for(let k=0;k<attempts;k++){if(e.rolls.drop[k]>=drop){ok=k;break}}
+    if(ok<0){(P.retry?dlqEv:lostEv).push(e);log.push({t:e.base,kind:P.retry?'dlq':'lost',e});return}
+    let t=e.base+(P.order?0:ok*14);
+    if(!P.order&&e.rolls.delay<delay)t+=15+e.rolls.delayAmt*55;
+    deliveries.push({e,t,dup:false});
+    if(e.rolls.dup<dup)deliveries.push({e,t:e.base+18+e.rolls.dupDelay*60,dup:true});
+  });
+  deliveries.sort((x,y)=>x.t-y.t||x.e.i-y.e.i);
+  const erp=INIT.map(a=>({...a})),seen=new Set(),hw={},hwAmend={};
+  const info=INIT.map(()=>({lost:0,dupApplied:0,overwrite:0,dlq:0}));
+  lostEv.forEach(e=>info[e.a].lost++);dlqEv.forEach(e=>info[e.a].dlq++);
+  let blocked=0,dupApplied=0,late=0;
+  deliveries.forEach(d=>{
+    const e=d.e,a=e.a;
+    if(P.idem&&seen.has(e.id)){blocked++;log.push({t:d.t,kind:'blocked',e,why:'Duplicate id ignored'});return}
+    if(P.order&&(hw[a]||0)>=e.seq){blocked++;log.push({t:d.t,kind:'blocked',e,why:'Stale sequence discarded'});return}
+    seen.add(e.id);
+    const newerAmend=e.type==='amend'&&(hwAmend[a]||0)>e.seq;
+    effect(erp[a],e);
+    hw[a]=Math.max(hw[a]||0,e.seq);if(e.type==='amend')hwAmend[a]=Math.max(hwAmend[a]||0,e.seq);
+    let kind='ok',why='Applied in order';
+    if(d.dup){kind='dup';dupApplied++;info[a].dupApplied++;why='Duplicate applied a second time'}
+    else if(newerAmend){kind='late';late++;why='Applied late'}
+    if(newerAmend)info[a].overwrite++;
+    log.push({t:d.t,kind,e,why,snap:{a,bal:erp[a].bal,plan:erp[a].plan}});
+  });
+  const pre=erp.map(s=>({...s}));
+  const diverged=pre.map((s,i)=>s.bal!==truth[i].bal||s.plan!==truth[i].plan);
+  const final=pre.map(s=>({...s}));
+  log.sort((x,y)=>x.t-y.t);
+  let repaired=0;
+  if(P.recon){diverged.forEach((d,i)=>{if(d){repaired++;final[i]={...truth[i]};log.push({t:9999+i,kind:'fix',e:{id:'ACC'+(i+1),a:i,type:'fix',seq:0},why:'Replayed from the source of truth for '+NAMES[i],snap:{a:i,bal:truth[i].bal,plan:truth[i].plan}})}})}
+  return {truth,pre,final,diverged,log,info,stats:{blocked,dupApplied,late,lost:lostEv.length,dlq:dlqEv.length,repaired,
+    nDiv:diverged.filter(Boolean).length,remaining:P.recon?0:diverged.filter(Boolean).length,
+    drift:pre.reduce((s,x,i)=>s+Math.abs(x.bal-truth[i].bal),0)}};
+}
+
+/* ---------- render ---------- */
+function chipEl(en){
+  const c=document.createElement('span');
+  const map={ok:'c-ok',late:'c-late',dup:'c-dup',blocked:'c-blk',lost:'c-lost',dlq:'c-dlq',fix:'c-fix'};
+  c.className='chip '+map[en.kind];
+  c.textContent=en.kind==='fix'?'FIX':L(en.e.type)+en.e.id.slice(1);
+  c.title=(en.kind==='fix'?en.why:desc(en.e)+'. '+(en.kind==='lost'?'Lost with no error and no retry.':en.kind==='dlq'?'Failed four attempts and parked in the dead-letter queue.':en.why));
+  return c;
+}
+function renderRows(erp,flashIdx){
+  const S=SIM;
+  $('rows').innerHTML=S.truth.map((t,i)=>{
+    const e=erp[i],dB=e.bal-t.bal,dP=e.plan!==t.plan;
+    let st='<span class="tag ok">In sync</span>';
+    if(dB||dP){st=(dB?'<span class="tag bad">Balance '+signed(dB)+'</span>':'')+(dP?'<span class="tag bad">Plan mismatch</span>':'')}
+    else if(S.diverged[i]&&P.recon)st='<span class="tag fix">Repaired</span>';
+    return `<tr class="${flashIdx===i?'flash':''}"><td>${NAMES[i]}</td><td>${money(t.bal)}</td><td class="${dB?'diff':''}">${money(e.bal)}</td><td>${money(t.plan)}</td><td class="${dP?'diff':''}">${money(e.plan)}</td><td class="st">${st}</td></tr>`;
+  }).join('');
+}
+function renderStatic(){
+  const S=SIM,st=S.stats;
+  const strip=$('strip');strip.innerHTML='';S.log.forEach(en=>strip.append(chipEl(en)));
+  renderRows(S.final);
+  const rem=st.remaining;
+  $('kpis').innerHTML=[
+    ['Accounts out of sync',rem+' of 6',rem?'bad':'good'],
+    ['Balance drift',money(st.drift)+(P.recon&&st.drift?' fixed':''),st.drift?(P.recon?'warn':'bad'):'good'],
+    ['Duplicates applied',st.dupApplied,st.dupApplied?'bad':''],
+    ['Lost silently',st.lost,st.lost?'bad':''],
+    ['In dead-letter queue',st.dlq,st.dlq?'warn':''],
+    ['Blocked by safeguards',st.blocked,'']
+  ].map(([a,b,c])=>`<div class="kpi ${c}"><small>${a}</small><b>${b}</b></div>`).join('');
+  const ins=$('insight');
+  if(!st.nDiv&&!st.lost&&!st.dlq){ins.className='insight good';ins.textContent=(P.drop+P.dup+P.delay===0)?'With a healthy network both systems agree. The risk is not in the happy path.':'Both systems agree in this world. Try a new random world to test whether the safeguards hold.'}
+  else if(P.recon&&st.nDiv){ins.className='insight warn';ins.textContent=pl(st.nDiv,'account')+' diverged during the run. Reconciliation found and repaired '+st.repaired+' of them, so finance sees agreement at close. The failures still happened, and prevention would have avoided the repair work.'}
+  else if(st.nDiv&&st.lost&&!st.dlq){ins.className='insight bad';ins.textContent=pl(st.nDiv,'account')+' disagree and nothing raised an alert. '+pl(st.lost,'event')+' vanished with no error. This is the silent failure that finance finds by hand at period close.'}
+  else if(st.nDiv){ins.className='insight bad';ins.textContent=pl(st.nDiv,'account')+' still disagree. The dead-letter queue makes '+pl(st.dlq,'failure')+' visible, but nothing replays them and no job compares the two systems.'}
+  else{ins.className='insight warn';ins.textContent='Balances agree, but '+(st.dlq?pl(st.dlq,'event')+' sit in the dead-letter queue and need a replay.':'check the stream for late or lost events.')}
+  drawBars();drawCauses();
+}
+function drawBars(){
+  const S=SIM,svg=$('bars');svg.innerHTML='';
+  const ns='http://www.w3.org/2000/svg',mk=(n,a,t)=>{const e=document.createElementNS(ns,n);for(const k in a)e.setAttribute(k,a[k]);if(t!=null)e.textContent=t;return e};
+  const d=S.pre.map((s,i)=>s.bal-S.truth[i].bal),mx=Math.max(1000,...d.map(Math.abs)),cx=236,sc=100/mx;
+  svg.append(mk('line',{class:'s-axis',x1:cx,x2:cx,y1:6,y2:204}));
+  d.forEach((v,i)=>{
+    const y=12+i*32;
+    svg.append(mk('text',{class:'s-lab',x:0,y:y+15},NAMES[i]));
+    if(v){const w=Math.abs(v)*sc;const r=mk('rect',{x:v>0?cx:cx-w,y:y+2,width:w,height:18,rx:2});r.style.fill=v>0?'var(--warn)':'var(--bad)';svg.append(r)}
+    const lab=(v?signed(v):'0')+(S.pre[i].plan!==S.truth[i].plan?'  plan':'');
+    svg.append(mk('text',{class:'s-val',x:v>0?cx+Math.abs(v)*sc+4:cx+4,y:y+15},v>0?lab:(v?'':lab)));
+    if(v<0)svg.append(mk('text',{class:'s-val',x:cx-Math.abs(v)*sc-4,y:y+15,'text-anchor':'end'},lab));
+  });
+}
+function drawCauses(){
+  const S=SIM,box=$('causes');
+  const items=[];
+  S.diverged.forEach((d,i)=>{
+    if(!d)return;const f=S.info[i],c=[];
+    if(f.lost)c.push('dropped event');if(f.dlq)c.push('event parked in the dead-letter queue');
+    if(f.dupApplied)c.push('duplicate applied');if(f.overwrite)c.push('out-of-order overwrite');
+    items.push(`<li><b>${NAMES[i]}:</b> ${c.length?c.join(', '):'combined effects'}</li>`);
+  });
+  box.innerHTML=items.length?`<ul style="margin:0;padding-left:18px;font-size:14px">${items.join('')}</ul><p class="help" style="margin-top:10px">${P.recon?'The reconciliation job reports each difference by cause, then repairs it from the source of truth.':'Without a reconciliation job nobody sees this list. Each cause needs a different safeguard.'}</p>`:'<p class="help">No account differs from the source of truth in this world.</p>';
+}
+function run(){
+  stopPlay();
+  SIM=simulate(world(seed),P);
+  ['drop','dup','delay'].forEach(k=>{if($(k).value!=P[k])$(k).value=P[k];$('o_'+k).textContent=P[k]+'%'});
+  ['idem','order','retry','recon'].forEach(k=>$(k).checked=P[k]);
+  $('seedlab').textContent='World #'+seed;
+  document.querySelectorAll('#presets .btn').forEach(b=>b.classList.toggle('on',JSON.stringify(PRESETS[b.dataset.k])===JSON.stringify(P)));
+  renderStatic();
+}
+function stopPlay(){if(timer){clearInterval(timer);timer=null}}
+function play(){
+  if(reduce){run();return}
+  stopPlay();const S=SIM;let i=0;const erp=INIT.map(a=>({...a}));
+  $('strip').innerHTML='';renderRows(erp);
+  timer=setInterval(()=>{
+    if(i>=S.log.length){stopPlay();renderStatic();return}
+    const en=S.log[i++],c=chipEl(en);c.classList.add('pop');$('strip').append(c);
+    if(en.snap){erp[en.snap.a]={...erp[en.snap.a],bal:en.snap.bal,plan:en.snap.plan};renderRows(erp,en.snap.a)}
+  },130);
+}
+['drop','dup','delay'].forEach(k=>$(k).addEventListener('input',e=>{P[k]=+e.target.value;run()}));
+['idem','order','retry','recon'].forEach(k=>$(k).addEventListener('change',e=>{P[k]=e.target.checked;run()}));
+Object.keys(PRESETS).forEach(k=>{const b=document.createElement('button');b.className='btn';b.dataset.k=k;b.textContent=k;b.onclick=()=>{Object.assign(P,PRESETS[k]);run()};$('presets').append(b)});
+$('watch').onclick=()=>{run();play()};
+$('reseed').onclick=()=>{seed=Math.floor(Math.random()*9000)+1;run()};
+run();
+</script>
+</body>
+</html>

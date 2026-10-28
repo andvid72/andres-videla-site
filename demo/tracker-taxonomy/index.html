@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gong and Salesforce: Tracker Taxonomy Designer | Andres Videla</title>
+<meta name="description" content="An interactive drag and drop demo with fictional data: map conversation trackers to Salesforce Opportunity fields and see duplication, ambiguity and ownership conflicts as you build.">
+<meta name="author" content="Andres Videla">
+<meta property="og:url" content="https://andres-videla.com/demo/tracker-taxonomy/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<link rel="canonical" href="https://andres-videla.com/demo/tracker-taxonomy/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gong and Salesforce: Tracker Taxonomy Designer">
+<meta property="og:description" content="Drag conversation trackers onto Opportunity fields and watch a taxonomy health index react to duplication, ambiguity and two-writer conflicts.">
+<meta property="og:image" content="https://andres-videla.com/assets/tracker-taxonomy-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0; --soft:#f0f1ef;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --k1:#2f6fe4; --k2:#7a4fd6; --k3:#1f9d7a; --k4:#c8473f; --k5:#d9822b; --k6:#2b92b0;
+  --shadow:0 10px 30px rgba(20,24,32,.18);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37; --soft:#20242b;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+    --k1:#6b9bff; --k2:#a98bf0; --k3:#4cd3ab; --k4:#ff8f86; --k5:#f0a35a; --k6:#5cc3de;
+    --shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37; --soft:#20242b;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  --k1:#6b9bff; --k2:#a98bf0; --k3:#4cd3ab; --k4:#ff8f86; --k5:#f0a35a; --k6:#5cc3de;
+  --shadow:0 10px 30px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 16px 64px}
+.back{display:inline-block;margin-bottom:12px;font-size:14px;color:var(--accent)}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 10px;font-weight:700}
+.lede{color:var(--muted);max-width:780px;margin:0 0 16px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:16px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:14px}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:3px 9px;font-size:12px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.toolbar .sp{flex:1}
+.hint{font-size:13px;color:var(--muted);margin:0 0 14px;min-height:20px}
+.hint b{color:var(--accent)}
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr) 330px;gap:16px;align-items:start}
+@media (max-width:1100px){.layout{grid-template-columns:230px minmax(0,1fr)}.side{grid-column:1 / -1}}
+@media (max-width:760px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.palette{min-height:120px;transition:background .15s,border-color .15s}
+.palette.over{border-color:var(--accent);background:var(--accent-soft)}
+.tcard{display:block;width:100%;text-align:left;border:1px solid var(--line);border-left:4px solid var(--cc,var(--accent));background:var(--surface);border-radius:8px;padding:8px 10px;margin-bottom:8px;cursor:grab;position:relative;transition:transform .12s,box-shadow .12s,border-color .12s}
+.tcard:hover{box-shadow:0 4px 14px rgba(20,24,32,.12);transform:translateY(-1px)}
+.tcard:active{cursor:grabbing}
+.tcard[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),0 0 0 3px var(--accent)}
+.tcard .n{font-weight:600;font-size:14px;padding-right:26px}
+.tcard .m{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.pill{display:inline-block;font-size:11px;border-radius:999px;padding:1px 8px;background:var(--soft);color:var(--muted)}
+.pill.amb{background:var(--warn-soft);color:var(--warn)}
+.pill.man{background:var(--accent-soft);color:var(--accent)}
+.ibtn{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);background:var(--bg);font-size:12px;line-height:1;color:var(--muted);padding:0;font-style:italic;font-family:Georgia,serif}
+.ibtn:hover{color:var(--accent);border-color:var(--accent)}
+.empty{font-size:13px;color:var(--muted);text-align:center;padding:14px 6px;border:1px dashed var(--line);border-radius:8px}
+.empty.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.zones{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.zone{border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--surface);min-height:104px;position:relative;transition:border-color .15s,background .15s,box-shadow .15s}
+.zone.ctx{grid-column:1 / -1;min-height:76px;border-style:dashed;background:var(--bg);margin-bottom:10px}
+.zone.over{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft)}
+.zone.armed{border-color:var(--accent);border-style:dashed;cursor:copy}
+.zone.ok{border-color:var(--ok)} .zone.warn{border-color:var(--warn)} .zone.error{border-color:var(--bad)}
+.zone.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+.zh{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px}
+.zh .api{font:600 12px/1.3 var(--mono);word-break:break-all}
+.zh .lbl{font-size:12px;color:var(--muted)}
+.zh .ibtn{position:static;flex:none}
+.zm{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.chips{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+.tchip{display:inline-flex;align-items:center;gap:6px;max-width:100%;background:var(--soft);border:1px solid var(--line);border-left:4px solid var(--cc,var(--accent));border-radius:6px;padding:3px 4px 3px 8px;font-size:13px;cursor:grab;animation:pop .22s}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
+.tchip .q{font-style:normal;font-size:10px;font-weight:700;background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:0 5px}
+.tchip .x{border:0;background:transparent;color:var(--muted);font-size:15px;line-height:1;padding:0 4px;border-radius:4px}
+.tchip .x:hover{color:var(--bad);background:var(--bad-soft)}
+.zone .ph{font-size:12px;color:var(--muted)}
+.ring{display:flex;align-items:center;gap:14px}
+.ring svg{width:120px;height:120px;flex:none}
+.ring .bg{fill:none;stroke:var(--line);stroke-width:10}
+.ring .fg{fill:none;stroke:var(--accent);stroke-width:10;stroke-linecap:round;transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .6s,stroke .3s}
+.ring text{font-size:30px;font-weight:700;fill:var(--ink);font-variant-numeric:tabular-nums}
+.ring .meta{min-width:0}
+.band{display:inline-block;border-radius:6px;padding:3px 9px;font-weight:600;font-size:13px}
+.band.ok{background:var(--ok-soft);color:var(--ok)} .band.warn{background:var(--warn-soft);color:var(--warn)} .band.bad{background:var(--bad-soft);color:var(--bad)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:6px 10px;background:var(--bg)}
+.stat b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.alerts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto}
+.alert{border:1px solid var(--line);border-left:4px solid var(--muted);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--bg);animation:pop .22s}
+.alert.error{border-left-color:var(--bad)} .alert.warn{border-left-color:var(--warn)} .alert.info{border-left-color:var(--accent)}
+.alert .t{font-weight:600;font-size:14px}
+.alert .code{font:11px var(--mono);color:var(--muted);margin-left:6px}
+.alert .a{display:flex;gap:6px;margin-top:6px}
+.tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 6px;margin-right:6px}
+.tag.error{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.info{background:var(--accent-soft);color:var(--accent)}
+.good{border:1px solid var(--ok);background:var(--ok-soft);color:var(--ok);border-radius:8px;padding:10px 12px;font-size:14px;font-weight:600}
+.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:24px}
+@media (max-width:760px){.principles{grid-template-columns:1fr}}
+.principles div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.principles b{display:block;margin-bottom:4px}
+.principles p{margin:0;color:var(--muted)}
+footer{margin-top:24px;font-size:13px;color:var(--muted)}
+.ov{position:fixed;inset:0;background:rgba(10,12,16,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.ov.on{display:flex}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:18px;animation:pop .2s}
+.dlg h3{margin:0 0 8px;font-size:18px}
+.dlg h4{margin:14px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.dlg p{margin:0;font-size:14px}
+.dlg .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.dlg .act{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+#toasts{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;align-items:center;z-index:60;width:calc(100% - 32px);max-width:460px;pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);border-radius:8px;padding:9px 14px;font-size:14px;box-shadow:var(--shadow);animation:pop .2s;pointer-events:auto}
+.toast.warn{background:var(--warn);color:#fff} .toast.error{background:var(--bad);color:#fff} .toast.ok{background:var(--ok);color:#fff}
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.mwrap{overflow-x:auto;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.mtab{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+.mtab th,.mtab td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.mtab tr:last-child td{border-bottom:0}
+.mtab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Gong and Salesforce: Tracker Taxonomy Designer</h1>
+  <p class="lede">Conversation trackers become CRM data the moment they are mapped to a field. Drag trackers onto Opportunity fields and watch a taxonomy health index react to duplication, ambiguity and two-writer conflicts before they reach the forecast.</p>
+  <div class="notice">Fictional trackers, fields and owners. Nothing here reflects a real configuration. The health index is illustrative and meant to show how governance problems compound, not to measure any real system.</div>
+
+  <div class="toolbar" role="group" aria-label="Presets and actions">
+    <button class="chip" data-preset="clean" aria-pressed="false">Start clean</button>
+    <button class="chip" data-preset="messy" aria-pressed="true">Messy taxonomy</button>
+    <button class="chip" data-preset="governed" aria-pressed="false">Well-governed</button>
+    <span class="sp"></span>
+    <button class="btn primary" id="autofix">Auto-fix all</button>
+    <button class="btn" id="undo">Undo</button>
+    <button class="btn" id="copy">Copy mapping</button>
+  </div>
+  <p class="hint" id="hint">Drag a tracker onto a field, or click a tracker and then click a field. Hold Alt while dropping to copy instead of move.</p>
+
+  <div class="layout">
+    <section class="panel palette" id="palette" aria-labelledby="t-p">
+      <h2 id="t-p">Gong trackers <span id="pcount"></span></h2>
+      <div id="plist"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="t-f">
+      <h2 id="t-f">Salesforce Opportunity fields</h2>
+      <div class="zones" id="zones"></div>
+    </section>
+
+    <aside class="side stack" style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <section class="panel" aria-labelledby="t-h">
+        <h2 id="t-h">Taxonomy health index</h2>
+        <div class="ring">
+          <svg viewBox="0 0 120 120" aria-hidden="true"><circle class="bg" cx="60" cy="60" r="52"/><circle class="fg" id="fg" cx="60" cy="60" r="52" stroke-dasharray="326.7" stroke-dashoffset="326.7"/><text x="60" y="70" text-anchor="middle" id="sc">0</text></svg>
+          <div class="meta"><span class="band" id="band"></span><p style="margin:8px 0 0;font-size:13px;color:var(--muted)" id="bandtxt"></p></div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="s1">0</b><span>Trackers governed</span></div>
+          <div class="stat"><b id="s2">0</b><span>Open findings</span></div>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="t-a">
+        <h2 id="t-a">Findings</h2>
+        <ul class="alerts" id="alerts"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <div class="principles">
+    <div><b>One writer per field</b><p>A field edited by reps and written by a tracker has no owner of truth. Decide who writes it and enforce it.</p></div>
+    <div><b>Ambiguous signals stay as context</b><p>A tracker with known false positives is valuable for coaching and review, and dangerous as a field value.</p></div>
+    <div><b>Every tracker has a home or a reason</b><p>An unassigned tracker is an unowned definition. Mapping it to a field or marking it context only is a governance decision.</p></div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid"><div><b>Data sources</b><ul><li>Tracker definitions can be listed through Gong's settings API, and call data can include tracker matches, topics and highlights.</li><li>Field metadata comes from Salesforce describe and from the Tooling API FieldDefinition object, which exposes properties such as data type and whether field history is tracked.</li><li>Tracker ownership is not assumed to exist in either system. It is a registry the organization must create.</li></ul></div><div><b>Limits and prerequisites</b><ul><li>Gong API credentials are issued by a technical administrator.</li><li>Gong documents default limits of 3 calls per second and 10,000 calls per day for the company.</li><li>Salesforce API requests are pooled per org within a 24-hour period. For Enterprise Edition the allowance is 100,000 plus a per-license amount and any purchased add-ons, and exceeding it returns HTTP 403 REQUEST_LIMIT_EXCEEDED.</li><li>Gong's CRM API is described as import-only, so it cannot read CRM data back out of Gong. A public endpoint that links tracker results to Opportunity records was not found in the sources consulted. Confirm how tracker outcomes reach Salesforce in the target org.</li></ul></div><div><b>How it would be validated</b><ul><li>Estimate the precision of each tracker on a labeled sample of calls. Gong describes tuning trackers as an iterative balance between precision and volume.</li><li>Treat the Ambiguous flags in this demo as hand-assigned. In a real org they come from that measurement.</li><li>Run the conflict rules against the real field list and review the findings with the field owners.</li></ul></div></div>
+    <p class="rnote">What this demo does not claim: trackers, fields and owners here are fictional, and the demo does not write to any system.</p>
+    <p class="rnote">References: <a href="https://help.gong.io/apidocs/introduction-2.md" target="_blank" rel="noopener">Gong API introduction</a> &middot; <a href="https://help.gong.io/docs/trackers-overview" target="_blank" rel="noopener">Gong trackers</a> &middot; <a href="https://developer.salesforce.com/docs/platform/salesforce-app-limits-cheatsheet/guide/salesforce-app-limits-platform-api.html" target="_blank" rel="noopener">Salesforce API request limits</a> &middot; <a href="https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobject.htm" target="_blank" rel="noopener">Salesforce describeSObject</a> &middot; <a href="https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/tooling_api_objects_fielddefinition.htm" target="_blank" rel="noopener">Tooling API FieldDefinition</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Gong and Salesforce are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by either vendor.</footer>
+</div>
+
+<div class="ov" id="ov" role="presentation"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dt" id="dlg"></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var CC={Commercial:"--k1",Competition:"--k2",Momentum:"--k3",Risk:"--k4",Stakeholders:"--k5",Process:"--k6"};
+
+  var T=[
+    {id:"t1",n:"Pricing discussed",c:"Commercial",o:"bool",amb:true,g:["disc"],home:"ctx",def:"Fires when pricing, quotes or rate cards are mentioned in a call.",fp:"Generic mentions such as a buyer asking what the list price is during discovery."},
+    {id:"t2",n:"Discount request",c:"Commercial",o:"bool",amb:false,g:["disc"],home:"f3",def:"Fires when the buyer explicitly asks for a reduction.",fp:"A rep offering a discount unprompted."},
+    {id:"t3",n:"Budget confirmed",c:"Commercial",o:"bool",amb:true,g:["budget"],home:"ctx",def:"Fires when the buyer states an approved or available budget.",fp:"Hypothetical language such as if we had budget."},
+    {id:"t4",n:"Competitor mention",c:"Competition",o:"category",amb:false,g:["comp"],home:"f2",def:"Fires when a competitor from a defined list is named.",fp:"A competitor named only as an example or in passing."},
+    {id:"t5",n:"Incumbent tool",c:"Competition",o:"category",amb:false,g:["comp"],home:"f11",def:"Fires when the buyer names the tool they use today.",fp:"A tool mentioned for a different team or a past employer."},
+    {id:"t6",n:"Next step agreed",c:"Momentum",o:"bool",amb:false,g:["next"],home:"f1",def:"Fires when a dated next step is agreed by both sides.",fp:"A vague follow up without a date."},
+    {id:"t7",n:"No next step",c:"Risk",o:"bool",amb:false,g:["next","risk"],home:"f9",def:"Fires when a call ends without an agreed next step.",fp:"Calls that are intentionally informational."},
+    {id:"t8",n:"Champion identified",c:"Stakeholders",o:"bool",amb:false,g:["stake"],home:"f5",def:"Fires when a buyer contact advocates for the deal internally.",fp:"A friendly contact mistaken for a champion."},
+    {id:"t9",n:"Economic buyer present",c:"Stakeholders",o:"bool",amb:false,g:["stake"],home:"f6",def:"Fires when a person with budget authority speaks on the call.",fp:"An executive who only joins to greet."},
+    {id:"t10",n:"Procurement involved",c:"Process",o:"category",amb:false,g:["proc"],home:"f7",def:"Fires when procurement or vendor onboarding is mentioned, with the stage.",fp:"Procurement discussed as a future possibility."},
+    {id:"t11",n:"Legal review",c:"Process",o:"category",amb:false,g:["proc"],home:"f8",def:"Fires when contract redlines or legal review are discussed, with the status.",fp:"Legal mentioned only as a generic concern."},
+    {id:"t12",n:"Timeline slip",c:"Risk",o:"bool",amb:true,g:["risk"],home:"ctx",def:"Fires when the buyer moves a date later.",fp:"Scheduling changes that do not affect the close date."},
+    {id:"t13",n:"Security questionnaire",c:"Process",o:"bool",amb:false,g:["sec"],home:"f12",def:"Fires when a security questionnaire or review is requested.",fp:"A generic question about certifications."}
+  ];
+  var F=[
+    {id:"f1",api:"Next_Step_Confirmed__c",lbl:"Next step confirmed",type:"checkbox",owner:"Sales Ops",manual:false},
+    {id:"f2",api:"Primary_Competitor__c",lbl:"Primary competitor",type:"picklist",owner:"RevOps",manual:false},
+    {id:"f3",api:"Discount_Requested__c",lbl:"Discount requested",type:"checkbox",owner:"Deal Desk",manual:false},
+    {id:"f4",api:"Budget_Status__c",lbl:"Budget status",type:"picklist",owner:"Sales Ops",manual:true},
+    {id:"f5",api:"Champion_Identified__c",lbl:"Champion identified",type:"checkbox",owner:"Sales Ops",manual:false},
+    {id:"f6",api:"Economic_Buyer_Engaged__c",lbl:"Economic buyer engaged",type:"checkbox",owner:"Sales Ops",manual:false},
+    {id:"f7",api:"Procurement_Stage__c",lbl:"Procurement stage",type:"picklist",owner:"Deal Desk",manual:false},
+    {id:"f8",api:"Legal_Review_Status__c",lbl:"Legal review status",type:"picklist",owner:"Legal Ops",manual:false},
+    {id:"f9",api:"Deal_Risk_Flag__c",lbl:"Deal risk flag",type:"checkbox",owner:"RevOps",manual:false},
+    {id:"f10",api:"Close_Date_Confidence__c",lbl:"Close date confidence",type:"picklist",owner:"RevOps",manual:true},
+    {id:"f11",api:"Incumbent_Tool__c",lbl:"Incumbent tool",type:"picklist",owner:"RevOps",manual:false},
+    {id:"f12",api:"Security_Review_Status__c",lbl:"Security review status",type:"picklist",owner:"Deal Desk",manual:false}
+  ];
+  var tById={}, fById={}; T.forEach(function(t){tById[t.id]=t}); F.forEach(function(f){fById[f.id]=f});
+  var CTX={id:"ctx",api:"Context only",lbl:"Kept for coaching and review, never written to a field"};
+
+  var WHY={
+    T01:["Two trackers that assert opposite outcomes write the same field, so the final value depends on call order.","Give each outcome its own field, or keep only the tracker that represents the state you need."],
+    T02:["Two trackers measuring the same event double count it and make downstream rules ambiguous.","Keep the more precise tracker in the field and route the other to context only."],
+    T03:["Unrelated signals share one field, so the value cannot be interpreted without knowing which tracker wrote it.","Split the signals into one field per meaning."],
+    T04:["A tracker that outputs a category, such as a competitor name, loses its value when stored in a checkbox.","Map it to a picklist field."],
+    T05:["A tracker with known false positives writes a field directly, so noise becomes CRM data.","Keep it as context, or require a confirming phrase and a review step before it writes."],
+    T06:["Reps edit this field by hand and a tracker also writes it, so the last writer silently wins.","Keep a single writer per field. Move the tracker to a field that Gong owns."],
+    T07:["One tracker feeds several targets, which creates several sources of truth for one signal.","Keep one home for each tracker."]
+  };
+
+  var PRESETS={
+    clean:{},
+    messy:{t1:["f3"],t2:["f3"],t3:["f4"],t4:["f2"],t5:["f2"],t6:["f1"],t7:["f1","f9"],t8:["f5"],t10:["f5"],t12:["f9"]},
+    governed:{t1:["ctx"],t2:["f3"],t3:["ctx"],t4:["f2"],t5:["f11"],t6:["f1"],t7:["f9"],t8:["f5"],t9:["f6"],t10:["f7"],t11:["f8"],t12:["ctx"],t13:["f12"]}
+  };
+
+  var M={}, hist=[], sel=null, busy=false, shown=0;
+
+  function clone(o){return JSON.parse(JSON.stringify(o))}
+  function snap(){hist.push(clone(M)); if(hist.length>60) hist.shift()}
+  function tg(t){return M[t.id]||[]}
+  function onField(fid){return T.filter(function(t){return tg(t).indexOf(fid)>=0})}
+  function names(ts){return ts.map(function(t){return t.n}).join(" and ")}
+  function targetName(id){return id==="ctx"?"Context only":fById[id].api}
+
+  function validate(){
+    var A=[];
+    F.forEach(function(f){
+      var ts=onField(f.id); if(!ts.length) return;
+      if(ts.length>1){
+        var ids=ts.map(function(t){return t.id});
+        var contra=ids.indexOf("t6")>=0 && ids.indexOf("t7")>=0;
+        var dup=false; for(var i=0;i<ts.length;i++)for(var j=i+1;j<ts.length;j++){if(ts[i].g.filter(function(x){return ts[j].g.indexOf(x)>=0}).length) dup=true}
+        var code=contra?"T01":(dup?"T02":"T03");
+        var fix=ts.filter(function(t){return t.home!==f.id});
+        if(fix.length===ts.length) fix=ts.slice(1);
+        A.push({code:code,sev:contra?"error":"warn",title:{T01:"Contradictory signals",T02:"Duplicate coverage",T03:"Mixed semantics"}[code],
+          msg:names(ts).replace(/ and /g,", ").replace(/, ([^,]*)$/," and $1")+(ts.length===2?" both write ":" all write ")+f.api+".",tids:ids,fid:f.id,fix:fix.map(function(t){return t.id})});
+      }
+      ts.forEach(function(t){
+        if(t.o==="category" && f.type==="checkbox") A.push({code:"T04",sev:"error",title:"Type mismatch",msg:t.n+" outputs a category but "+f.api+" is a checkbox.",tids:[t.id],fid:f.id,fix:[t.id]});
+        if(t.amb) A.push({code:"T05",sev:"warn",title:"Ambiguous signal writes a field",msg:t.n+" has known false positives and writes "+f.api+" directly.",tids:[t.id],fid:f.id,fix:[t.id]});
+      });
+      if(f.manual) A.push({code:"T06",sev:"warn",title:"Two writers on one field",msg:f.api+" is edited by reps and also written by "+names(ts)+".",tids:ts.map(function(t){return t.id}),fid:f.id,fix:ts.map(function(t){return t.id})});
+    });
+    T.forEach(function(t){
+      if(tg(t).length>=2) A.push({code:"T07",sev:"warn",title:"One tracker, several targets",msg:t.n+" is mapped to "+tg(t).length+" targets: "+tg(t).map(targetName).join(", ")+".",tids:[t.id],fid:null,fix:[t.id]});
+    });
+    A.forEach(function(a){a.key=a.code+"|"+(a.fid||"")+"|"+a.tids.join(",")});
+    A.sort(function(a,b){return (a.sev==="error"?0:1)-(b.sev==="error"?0:1)});
+    return A;
+  }
+
+  /* ---------- rendering ---------- */
+  function trackerCard(t){
+    return '<div class="tcard" role="button" tabindex="0" draggable="true" data-tid="'+t.id+'" data-from="pal" aria-pressed="'+(sel&&sel.tid===t.id&&sel.from==="pal")+'" style="--cc:var('+CC[t.c]+')">'+
+      '<div class="n">'+t.n+'</div><div class="m"><span class="pill">'+t.c+'</span><span class="pill">'+(t.o==="bool"?"Yes or no":"Category")+'</span>'+(t.amb?'<span class="pill amb">Ambiguous</span>':'')+'</div>'+
+      '<button class="ibtn" data-act="info-t" data-tid="'+t.id+'" aria-label="About '+t.n+'">i</button></div>';
+  }
+  function chip(t,from){
+    return '<span class="tchip" draggable="true" data-tid="'+t.id+'" data-from="'+from+'" style="--cc:var('+CC[t.c]+')">'+t.n+(t.amb?'<i class="q" title="Ambiguous signal">?</i>':'')+
+      '<button class="x" data-act="unmap" data-tid="'+t.id+'" data-from="'+from+'" aria-label="Remove '+t.n+'">&times;</button></span>';
+  }
+  function zoneCls(id,A){
+    var ts=onField(id), s=A.filter(function(a){return a.fid===id});
+    if(s.some(function(a){return a.sev==="error"})) return "error";
+    if(s.length) return "warn";
+    return ts.length?"ok":"";
+  }
+  function zone(id,A){
+    var f=id==="ctx"?CTX:fById[id], ts=onField(id), cls=zoneCls(id,A)+(sel?" armed":"")+(id==="ctx"?" ctx":"");
+    var meta=id==="ctx"?"":'<div class="zm"><span class="pill">'+f.type+'</span><span class="pill">'+f.owner+'</span>'+(f.manual?'<span class="pill man">Rep-edited</span>':'')+'</div>';
+    return '<div class="zone '+cls+'" data-target="'+id+'" tabindex="0" role="group" aria-label="'+f.api+'">'+
+      '<div class="zh"><div><div class="api">'+f.api+'</div><div class="lbl">'+f.lbl+'</div></div>'+(id==="ctx"?"":'<button class="ibtn" data-act="info-f" data-fid="'+id+'" aria-label="About '+f.api+'">i</button>')+'</div>'+meta+
+      '<div class="chips">'+(ts.length?ts.map(function(t){return chip(t,id)}).join(""):'<span class="ph">Drop a tracker here</span>')+'</div></div>';
+  }
+  function render(){
+    var A=validate();
+    var un=T.filter(function(t){return !tg(t).length});
+    $("pcount").textContent="("+un.length+" unassigned)";
+    $("plist").innerHTML=un.length?un.map(trackerCard).join(""):'<div class="empty ok">All trackers have a home or a reason.</div>';
+    $("zones").innerHTML=zone("ctx",A)+F.map(function(f){return zone(f.id,A)}).join("");
+
+    var gov=T.length-un.length, errs=A.filter(function(a){return a.sev==="error"}).length, warns=A.length-errs;
+    var quality=Math.max(0,100-12*errs-5*warns), score=Math.round(gov/T.length*quality);
+    $("s1").textContent=gov+" of "+T.length; $("s2").textContent=A.length;
+    var b=$("band"), bt=$("bandtxt");
+    if(score>=85){b.className="band ok";b.textContent="Production-ready";bt.textContent="Signals are mapped once, to compatible fields, with a clear writer."}
+    else if(score>=55){b.className="band warn";b.textContent="Needs governance review";bt.textContent="Some signals overlap, or some trackers have no owner or home yet."}
+    else {b.className="band bad";b.textContent="High risk of conflicting signals";bt.textContent="The forecast would inherit contradictory or missing signals."}
+    $("fg").style.stroke=score>=85?"var(--ok)":(score>=55?"var(--warn)":"var(--bad)");
+    $("fg").style.strokeDashoffset=326.7*(1-score/100);
+    animateScore(score);
+
+    var html=A.map(function(a,i){
+      return '<li class="alert '+a.sev+'"><span class="tag '+a.sev+'">'+(a.sev==="error"?"Error":"Warning")+'</span><span class="t">'+a.title+'</span><span class="code">'+a.code+'</span><div style="margin-top:4px">'+a.msg+'</div>'+
+        '<div class="a"><button class="btn sm" data-act="alert" data-i="'+i+'">Details</button><button class="btn sm primary" data-act="fix" data-i="'+i+'">Fix</button></div></li>';
+    }).join("");
+    if(!A.length) html='<li class="good">'+(gov?"No findings. This taxonomy is clean.":"Nothing mapped yet. Drag a tracker onto a field to begin.")+'</li>';
+    if(un.length&&gov) html+='<li class="alert info"><span class="tag info">Info</span><span class="t">Unassigned trackers</span><div style="margin-top:4px">'+un.map(function(t){return t.n}).join(", ")+' have no field and no context-only decision.</div></li>';
+    $("alerts").innerHTML=html;
+    window.__A=A;
+    $("undo").disabled=!hist.length||busy; $("autofix").disabled=busy;
+    var h=$("hint");
+    h.innerHTML=sel?'Selected: <b>'+tById[sel.tid].n+'</b>. Click a field to place it, or click the tracker again to cancel.':'Drag a tracker onto a field, or click a tracker and then click a field. Hold Alt while dropping to copy instead of move.';
+  }
+  function animateScore(to){
+    var from=shown, t0=null;
+    function step(ts){if(!t0)t0=ts;var p=Math.min((ts-t0)/600,1);var v=Math.round(from+(to-from)*p);$("sc").textContent=v;if(p<1)requestAnimationFrame(step);else shown=to}
+    requestAnimationFrame(step);
+  }
+
+  /* ---------- actions ---------- */
+  function toast(msg,kind){
+    var d=document.createElement("div");d.className="toast "+(kind||"");d.textContent=msg;$("toasts").appendChild(d);
+    setTimeout(function(){if(d.parentNode)d.parentNode.removeChild(d)},2800);
+  }
+  function keys(A){return A.map(function(a){return a.key})}
+  function place(tid,target,o){
+    o=o||{}; var t=tById[tid], cur=tg(t).slice();
+    if(cur.indexOf(target)>=0){toast("Already mapped there.");return}
+    var before=keys(validate()); snap();
+    if(o.from&&o.from!=="pal"&&!o.copy) cur=cur.filter(function(x){return x!==o.from});
+    cur.push(target); M[tid]=cur; sel=null; render();
+    var added=validate().filter(function(a){return before.indexOf(a.key)<0});
+    var z=document.querySelector('.zone[data-target="'+target+'"]');
+    if(added.length){toast(added[0].title+": "+added[0].msg,added[0].sev==="error"?"error":"warn"); if(z){z.classList.add("shake")}}
+    else toast("Mapped "+t.n+" to "+targetName(target)+".","ok");
+  }
+  function unmap(tid,from){snap();M[tid]=tg(tById[tid]).filter(function(x){return x!==from});if(!M[tid].length)delete M[tid];render();toast("Removed "+tById[tid].n+" from "+targetName(from)+".")}
+  function applyFix(a){a.fix.forEach(function(id){M[id]=[tById[id].home]})}
+  function fixOne(i){var A=validate();var a=A[i];if(!a)return;snap();applyFix(a);render();toast("Fixed: "+a.title+".","ok")}
+  function autofix(){
+    if(busy)return; busy=true; snap(); var guard=0;
+    function next(){
+      var A=validate();
+      if(A.length&&guard++<40){applyFix(A[0]);render();toast("Fixed: "+A[0].title+".","ok");setTimeout(next,600)}
+      else{
+        var un=T.filter(function(t){return !tg(t).length});
+        un.forEach(function(t){M[t.id]=[t.home]});
+        busy=false; render();
+        if(un.length)toast("Assigned "+un.length+" remaining trackers to their recommended home.","ok");
+        else if(!guard)toast("Nothing to fix.");
+      }
+    }
+    next();
+  }
+  function loadPreset(k){snap();M=clone(PRESETS[k]);sel=null;render()}
+
+  /* ---------- modal ---------- */
+  var lastFocus=null;
+  function openModal(title,body,actions){
+    lastFocus=document.activeElement;
+    $("dlg").innerHTML='<h3 id="dt">'+title+'</h3>'+body+'<div class="act" id="dact"></div>';
+    var act=$("dact");
+    (actions||[]).concat([{label:"Close",fn:closeModal}]).forEach(function(a){
+      var b=document.createElement("button");b.className="btn"+(a.primary?" primary":"");b.textContent=a.label;b.onclick=function(){a.fn&&a.fn()};act.appendChild(b);
+    });
+    $("ov").classList.add("on"); act.lastChild.focus();
+  }
+  function closeModal(){$("ov").classList.remove("on");if(lastFocus&&lastFocus.focus)try{lastFocus.focus()}catch(e){}}
+  $("ov").addEventListener("click",function(e){if(e.target===$("ov"))closeModal()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"){if($("ov").classList.contains("on"))closeModal();else if(sel){sel=null;render()}}});
+
+  function trackerModal(id){
+    var t=tById[id], home=t.home==="ctx"?"Context only":fById[t.home].api;
+    openModal(t.n,
+      '<div class="row"><span class="pill">'+t.c+'</span><span class="pill">'+(t.o==="bool"?"Yes or no":"Category")+'</span>'+(t.amb?'<span class="pill amb">Ambiguous</span>':'')+'</div>'+
+      '<h4>Definition</h4><p>'+t.def+'</p><h4>Typical false positives</h4><p>'+t.fp+'</p><h4>Recommended home</h4><p>'+home+(t.amb?". Ambiguous trackers work best as context, not as field values.":".")+'</p>',
+      [{label:"Place in recommended home",primary:true,fn:function(){closeModal();snap();M[t.id]=[t.home];render();toast("Mapped "+t.n+" to "+home+".","ok")}}]);
+  }
+  function fieldModal(id){
+    var f=fById[id], ts=onField(id);
+    openModal(f.api,
+      '<div class="row"><span class="pill">'+f.type+'</span><span class="pill">Owner: '+f.owner+'</span>'+(f.manual?'<span class="pill man">Rep-edited</span>':'')+'</div>'+
+      '<h4>Meaning</h4><p>'+f.lbl+'.</p><h4>Writer rule</h4><p>'+(f.manual?"Reps edit this field by hand. A tracker that also writes it creates two writers, so the last one silently wins.":"No manual edits are expected. A single tracker with a clear definition should write this field.")+'</p>'+
+      '<h4>Currently mapped</h4><p>'+(ts.length?names(ts).replace(/ and /g,", "):"No trackers yet.")+'</p>');
+  }
+  function alertModal(i){
+    var a=window.__A[i]; if(!a)return;
+    var w=WHY[a.code];
+    openModal(a.title+' <span class="code" style="font:11px var(--mono);color:var(--muted)">'+a.code+'</span>',
+      '<div class="row"><span class="tag '+a.sev+'">'+(a.sev==="error"?"Error":"Warning")+'</span></div><p>'+a.msg+'</p><h4>Why it matters</h4><p>'+w[0]+'</p><h4>Recommended design</h4><p>'+w[1]+'</p><h4>What the fix does</h4><p>'+a.fix.map(function(id){var t=tById[id];return t.n+" moves to "+(t.home==="ctx"?"Context only":fById[t.home].api)}).join(". ")+'.</p>',
+      [{label:"Apply fix",primary:true,fn:function(){closeModal();fixOne(i)}}]);
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener("click",function(e){
+    var el=e.target.closest("[data-act]");
+    if(el){
+      var act=el.dataset.act;
+      if(act==="info-t"){e.stopPropagation();trackerModal(el.dataset.tid);return}
+      if(act==="info-f"){e.stopPropagation();fieldModal(el.dataset.fid);return}
+      if(act==="unmap"){unmap(el.dataset.tid,el.dataset.from);return}
+      if(act==="alert"){alertModal(+el.dataset.i);return}
+      if(act==="fix"){fixOne(+el.dataset.i);return}
+    }
+    var card=e.target.closest(".tcard");
+    if(card){var id=card.dataset.tid; sel=(sel&&sel.tid===id&&sel.from==="pal")?null:{tid:id,from:"pal"}; render(); return}
+    var z=e.target.closest(".zone");
+    if(z&&sel&&!e.target.closest(".tchip")){place(sel.tid,z.dataset.target,{from:sel.from,copy:e.altKey})}
+  });
+  document.addEventListener("keydown",function(e){
+    if(e.key!=="Enter"&&e.key!==" ")return;
+    var t=e.target;
+    if(t.classList&&t.classList.contains("tcard")){e.preventDefault();t.click()}
+    else if(t.classList&&t.classList.contains("zone")&&sel){e.preventDefault();place(sel.tid,t.dataset.target,{from:sel.from})}
+  });
+  document.addEventListener("dragstart",function(e){
+    var d=e.target.closest&&e.target.closest("[draggable]"); if(!d)return;
+    e.dataTransfer.setData("text/plain",d.dataset.tid+"|"+d.dataset.from); e.dataTransfer.effectAllowed="copyMove"; sel=null;
+  });
+  document.addEventListener("dragover",function(e){
+    var z=e.target.closest&&(e.target.closest(".zone")||e.target.closest("#palette")); if(!z)return;
+    e.preventDefault(); e.dataTransfer.dropEffect=e.altKey?"copy":"move"; z.classList.add("over");
+  });
+  document.addEventListener("dragleave",function(e){var z=e.target.closest&&(e.target.closest(".zone")||e.target.closest("#palette")); if(z&&!z.contains(e.relatedTarget))z.classList.remove("over")});
+  document.addEventListener("drop",function(e){
+    var z=e.target.closest&&(e.target.closest(".zone")||e.target.closest("#palette")); if(!z)return;
+    e.preventDefault(); z.classList.remove("over");
+    var p=(e.dataTransfer.getData("text/plain")||"").split("|"); if(p.length!==2||!tById[p[0]])return;
+    if(z.id==="palette"){if(p[1]!=="pal")unmap(p[0],p[1]);return}
+    place(p[0],z.dataset.target,{from:p[1],copy:e.altKey});
+  });
+  document.addEventListener("dragend",function(){document.querySelectorAll(".over").forEach(function(x){x.classList.remove("over")})});
+
+  document.querySelectorAll("[data-preset]").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll("[data-preset]").forEach(function(x){x.setAttribute("aria-pressed","false")});
+      b.setAttribute("aria-pressed","true"); loadPreset(b.dataset.preset);
+    });
+  });
+  $("autofix").addEventListener("click",autofix);
+  $("undo").addEventListener("click",function(){if(!hist.length)return;M=hist.pop();sel=null;render();toast("Undone.")});
+  $("copy").addEventListener("click",function(){
+    var lines=["Gong tracker -> Salesforce target"];
+    T.forEach(function(t){lines.push(t.n+" -> "+(tg(t).length?tg(t).map(targetName).join(", "):"Unassigned"))});
+    try{navigator.clipboard.writeText(lines.join("\n"));toast("Mapping copied.","ok")}catch(err){toast("Copy is not available in this browser.","warn")}
+  });
+
+  M=clone(PRESETS.messy); render();
+})();
+</script>
+</body>
+</html>

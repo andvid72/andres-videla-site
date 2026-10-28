@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spiff and Salesforce: Commission Plan What-If | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative model of what a commission plan change does to payout, cost of sale and individual reps, including the cliff and cap edge cases.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Spiff and Salesforce: Commission Plan What-If">
+<meta property="og:url" content="https://andres-videla.com/demo/commission-plan-whatif/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Change rate, accelerator, cap, retroactivity, kicker and clawback, and see who gains, who loses and what the plan costs before it ships.">
+<meta property="og:image" content="https://andres-videla.com/assets/commission-plan-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6;
+  --accent:#2F4B6E; --ok:#2E7D5B; --warn:#9A4A1F; --bad:#B23A2E; --blue:#2F6FB5; --grey:#98A2B3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+    --accent:#8FB3E6; --ok:#5CC498; --warn:#E5955F; --bad:#EE7B6E; --blue:#74AEEA; --grey:#6B7788; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+  --accent:#8FB3E6; --ok:#5CC498; --warn:#E5955F; --bad:#EE7B6E; --blue:#74AEEA; --grey:#6B7788; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.back{color:var(--accent);display:inline-block;margin-bottom:14px;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 48px}
+h1{font:700 clamp(1.7rem,3.6vw,2.5rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:48rem;margin:0 0 20px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:20px}
+.presets .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:99px;cursor:pointer;font:inherit;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.btn.ghost{border-radius:6px}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px;min-width:0}
+.card h2{font:700 12px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.card h3{font:700 12px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px}
+.ctl{margin-bottom:14px}
+.ctl .row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:2px}
+.ctl .row b{font-family:var(--mono)}
+.ctl small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.tg{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:14px;cursor:pointer}
+.tg input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.tg small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.seed{font:12px var(--mono);color:var(--muted)}
+.right{display:grid;gap:20px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px}
+.kpi{background:var(--panel);border-radius:6px;padding:9px 11px}
+.kpi small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.kpi b{font:700 21px var(--serif);font-variant-numeric:tabular-nums}
+.kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--ok)} .kpi.warn b{color:var(--warn)}
+.insight{margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--panel);font-size:14.5px;border-left:3px solid var(--grey)}
+.insight.bad{border-left-color:var(--bad)} .insight.good{border-left-color:var(--ok)} .insight.warn{border-left-color:var(--warn)}
+svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--rule);stroke-width:1} .gr{stroke:var(--rule);stroke-dasharray:2 4}
+.tk{fill:var(--muted);font:11px var(--sans)} .lb{fill:var(--ink);font:12px var(--sans)}
+.dl{font:700 10px var(--sans);text-anchor:middle;fill:#fff}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.leg i{display:inline-block;width:14px;height:4px;border-radius:2px;vertical-align:3px;margin-right:5px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:620px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--rule);font-weight:700}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+td{padding:8px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--sans);font-size:14px}
+td.up{color:var(--ok)} td.dn{color:var(--bad)}
+td.l{font-family:var(--sans);font-size:12.5px}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11.5px;background:var(--panel);margin:1px 3px 1px 0;color:var(--muted)}
+.tag.bad{background:rgba(178,58,46,.14);color:var(--bad)} .tag.warn{background:rgba(154,74,31,.15);color:var(--warn)}
+.help{font-size:13px;color:var(--muted);margin:8px 0 0}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:16px}
+.foot p{margin:0 0 6px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+@media (max-width:480px){.wrap{padding:16px 14px 40px}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative model with fictional reps, quotas and deals. No real systems, data or vendor APIs are involved, and every parameter is a model input, not a measurement.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Spiff and Salesforce: commission plan what-if</h1>
+  <p class="dek">A plan change looks small in a spreadsheet and lands hard on individual reps. Change the rate, the accelerator, the cap and the edge-case rules, then see what the plan costs and who it moves before it ships.</p>
+
+  <div class="presets" id="presets" role="group" aria-label="Plan changes"><span class="lbl">Try a change</span></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Proposed plan</h2>
+      <div class="ctl"><div class="row"><label for="rate">Base commission rate</label><b id="o_rate"></b></div><input id="rate" type="range" min="4" max="14" step="0.5"><small>Paid on credited bookings up to quota.</small></div>
+      <div class="ctl"><div class="row"><label for="acc">Accelerator above quota</label><b id="o_acc"></b></div><input id="acc" type="range" min="1" max="2.5" step="0.1"><small>Multiple of the base rate past 100% attainment.</small></div>
+      <div class="ctl"><div class="row"><label for="dec">Decelerator below 50%</label><b id="o_dec"></b></div><input id="dec" type="range" min="0.4" max="1" step="0.1"><small>Multiple of the base rate on the first half of quota.</small></div>
+      <div class="ctl"><div class="row"><label for="cap">Payout cap</label><b id="o_cap"></b></div><input id="cap" type="range" min="2" max="8" step="1"><small>Multiple of target incentive. The last step means no cap.</small></div>
+      <div class="ctl"><div class="row"><label for="kick">Strategic product kicker</label><b id="o_kick"></b></div><input id="kick" type="range" min="0" max="5" step="0.5"><small>Extra percent on credited bookings of the strategic product.</small></div>
+      <h3>Edge-case rules</h3>
+      <label class="tg"><input type="checkbox" id="retro"><span>Retroactive accelerator<small>Past 100%, every deal is paid at the accelerated rate, not just the excess.</small></span></label>
+      <label class="tg"><input type="checkbox" id="claw"><span>Clawback on early churn<small>Commission on deals that churned inside the window is reversed.</small></span></label>
+      <div class="actions"><button class="btn ghost" id="reseed">New random quarter</button><span class="seed" id="seedlab"></span></div>
+      <p class="help">The current plan is fixed: 8% rate, 1.5x accelerator, no decelerator, 5x cap, no kicker, no clawback.</p>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2>Payout curve, as a multiple of target incentive</h2>
+        <svg id="curve" viewBox="0 0 720 290" role="img" aria-label="Payout multiple versus quota attainment for the current and proposed plans, with each rep marked"></svg>
+        <div class="leg"><span><i style="background:var(--grey)"></i>Current plan</span><span><i style="background:var(--accent)"></i>Proposed plan</span><span><i style="background:var(--warn);height:8px;width:8px;border-radius:50%;vertical-align:0"></i>Rep on the proposed plan</span></div>
+        <p class="help" id="curvehelp"></p>
+      </div>
+
+      <div class="card">
+        <h2>What the change does</h2>
+        <div class="kpis" id="kpis"></div>
+        <div class="insight" id="insight" aria-live="polite"></div>
+      </div>
+
+      <div class="card">
+        <h2>Payout by rep</h2>
+        <svg id="bars" viewBox="0 0 720 270" role="img" aria-label="Payout by rep, current versus proposed plan"></svg>
+        <div class="leg"><span><i style="background:var(--grey)"></i>Current</span><span><i style="background:var(--accent)"></i>Proposed</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Rep by rep</h2>
+        <div class="scroll"><table><thead><tr><th>Rep</th><th>Quota</th><th>Credited</th><th>Attainment</th><th>Current</th><th>Proposed</th><th>Change</th><th class="l">Flags</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p>Spiff, Salesforce and other product names are trademarks of their respective owners. This page is not affiliated with or endorsed by any vendor.</p>
+    <p><a href="/portfolio/" class="back">Back to portfolio</a></p>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const $$=n=>'$'+Math.round(n).toLocaleString('en-US');
+const S$=n=>(n>0?'+':n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US');
+const BASE={rate:8,acc:1.5,dec:1,cap:5,kick:0,retro:false,claw:false};
+const PRESETS={
+  'Raise the accelerator':{rate:8,acc:2.2,dec:1,cap:5,kick:0,retro:false,claw:false},
+  'Retroactive accelerator':{rate:8,acc:1.5,dec:1,cap:5,kick:0,retro:true,claw:false},
+  'Kicker and clawback':{rate:8,acc:1.5,dec:1,cap:5,kick:3,retro:false,claw:true},
+  'Cap the upside':{rate:9,acc:1.5,dec:0.6,cap:2,kick:0,retro:false,claw:false}
+};
+const P={...PRESETS['Retroactive accelerator']};
+let seed=3;
+const NAMES=['Avery','Blake','Casey','Devon','Emery','Finley','Gray','Harper'];
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function world(seed){
+  const r=rng(seed),plan=[.42,.7,.9,.985,1.012,1.2,1.42,1.8];
+  return NAMES.map((n,i)=>{
+    const Q=Math.round((800+r()*600)/10)*10000;
+    const att=Math.max(.2,plan[i]+(r()-.5)*.05*(i===3||i===4?0:1));
+    const target=Math.round(att*Q/5000)*5000, nd=4+Math.floor(r()*4);
+    const w=Array.from({length:nd},()=>.5+r()),ws=w.reduce((a,b)=>a+b,0);
+    const deals=w.map(x=>({amt:Math.max(5000,Math.round(target*x/ws/5000)*5000),strat:r()<.32,churn:r()<.12,split:r()<.15}));
+    let others=0;for(let k=0;k<nd-1;k++)others+=deals[k].amt*(deals[k].split?.5:1);
+    const last=deals[nd-1];last.split=false;last.amt=Math.max(5000,target-others);
+    const cred=deals.reduce((s,d)=>s+d.amt*(d.split?.5:1),0);
+    const strat=deals.filter(d=>d.strat).reduce((s,d)=>s+d.amt*(d.split?.5:1),0);
+    const churn=deals.filter(d=>d.churn).reduce((s,d)=>s+d.amt*(d.split?.5:1),0);
+    return {name:n,Q,B:cred,strat,churn,splits:deals.filter(d=>d.split).length,churnN:deals.filter(d=>d.churn).length};
+  });
+}
+function payout(r,pl){
+  const rate=pl.rate/100,TI=rate*r.Q,a=r.B/r.Q,half=.5*r.Q;
+  let p;
+  if(pl.retro&&a>=1)p=rate*pl.acc*r.B;
+  else p=rate*pl.dec*Math.min(r.B,half)+rate*Math.max(0,Math.min(r.B,r.Q)-half)+rate*pl.acc*Math.max(0,r.B-r.Q);
+  p+=pl.kick/100*r.strat;
+  if(pl.claw)p-=rate*r.churn;
+  p=Math.max(0,p);
+  const capped=pl.cap<8&&p>pl.cap*TI;if(capped)p=pl.cap*TI;
+  return {p,capped,TI};
+}
+function curveAt(att,pl){return payout({Q:1,B:att,strat:0,churn:0},pl).p/(pl.rate/100)}
+function ns(n,a,t){const e=document.createElementNS('http://www.w3.org/2000/svg',n);for(const k in a){if(k==='fill'||k==='stroke')e.style[k]=a[k];else e.setAttribute(k,a[k])}if(t!=null)e.textContent=t;return e}
+
+function drawCurve(reps,res){
+  const svg=$('curve');svg.innerHTML='';
+  const W=720,H=290,Lm=46,Rm=14,Tm=14,Bm=38,maxA=2;
+  const xs=[];for(let a=0;a<=maxA+1e-9;a+=.01)xs.push(a);
+  const ymax=Math.max(1.6,...xs.map(a=>curveAt(a,P)),...xs.map(a=>curveAt(a,BASE)),...res.map(x=>x.pn.p/x.pn.TI))*1.06;
+  const X=a=>Lm+(W-Lm-Rm)*a/maxA,Y=v=>Tm+(H-Tm-Bm)*(1-v/ymax);
+  for(let i=0;i<=4;i++){const v=ymax*i/4;svg.append(ns('line',{class:i?'gr':'ax',x1:Lm,x2:W-Rm,y1:Y(v),y2:Y(v)}),ns('text',{class:'tk',x:Lm-6,y:Y(v)+4,'text-anchor':'end'},v.toFixed(1)+'x'))}
+  [0,.5,1,1.5,2].forEach(a=>svg.append(ns('text',{class:'tk',x:X(a),y:H-20,'text-anchor':'middle'},Math.round(a*100)+'%')));
+  svg.append(ns('text',{class:'tk',x:W-Rm,y:H-4,'text-anchor':'end'},'Quota attainment'));
+  svg.append(ns('line',{x1:X(1),x2:X(1),y1:Tm,y2:H-Bm,stroke:'var(--grey)','stroke-dasharray':'3 4'}));
+  const path=(pl)=>{let d='';let prev=null;xs.forEach((a,i)=>{const v=curveAt(a,pl);d+=(i&&Math.abs(v-prev)>.35?' L'+X(a)+','+Y(prev)+' M':(i?' L':'M'))+X(a)+','+Y(v);prev=v});return d};
+  svg.append(ns('path',{d:path(BASE),fill:'none',stroke:'var(--grey)','stroke-width':2,'stroke-dasharray':'5 4'}));
+  svg.append(ns('path',{d:path(P),fill:'none',stroke:'var(--accent)','stroke-width':2.75}));
+  res.forEach(x=>{
+    const a=Math.min(maxA,x.a),cx=X(a),cy=Y(x.pn.p/x.pn.TI);
+    const c=ns('circle',{cx,cy,r:6.5,fill:x.pn.capped?'var(--bad)':'var(--warn)',stroke:'var(--surface)'});c.style.strokeWidth='1.5';svg.append(c);
+    svg.append(ns('text',{class:'dl',x:cx,y:cy+3.5},x.r.name[0]));
+  });
+}
+function drawBars(res){
+  const svg=$('bars');svg.innerHTML='';
+  const W=720,Lm=70,Rm=60,Tm=6,rowH=32,mx=Math.max(...res.flatMap(x=>[x.pc.p,x.pn.p]))*1.02;
+  const X=v=>Lm+(W-Lm-Rm)*v/mx;
+  res.forEach((x,i)=>{
+    const y=Tm+i*rowH;
+    svg.append(ns('text',{class:'lb',x:0,y:y+17},x.r.name));
+    svg.append(ns('rect',{x:Lm,y:y+2,width:Math.max(1,X(x.pc.p)-Lm),height:10,rx:2,fill:'var(--grey)'}));
+    svg.append(ns('rect',{x:Lm,y:y+14,width:Math.max(1,X(x.pn.p)-Lm),height:10,rx:2,fill:'var(--accent)'}));
+    svg.append(ns('text',{class:'tk',x:X(Math.max(x.pc.p,x.pn.p))+6,y:y+21},$$(x.pn.p)));
+  });
+}
+function render(){
+  const reps=world(seed);
+  ['rate','acc','dec','cap','kick'].forEach(k=>{if($(k).value!=P[k])$(k).value=P[k]});
+  $('o_rate').textContent=P.rate+'%';$('o_acc').textContent=P.acc.toFixed(1)+'x';$('o_dec').textContent=P.dec.toFixed(1)+'x';
+  $('o_cap').textContent=P.cap>=8?'No cap':P.cap+'x';$('o_kick').textContent=P.kick.toFixed(1)+'%';
+  ['retro','claw'].forEach(k=>$(k).checked=P[k]);
+  $('seedlab').textContent='Quarter #'+seed;
+  document.querySelectorAll('#presets .btn').forEach(b=>b.classList.toggle('on',JSON.stringify(PRESETS[b.dataset.k])===JSON.stringify(P)));
+  const res=reps.map(r=>({r,a:r.B/r.Q,pc:payout(r,BASE),pn:payout(r,P)}));
+  const totC=res.reduce((s,x)=>s+x.pc.p,0),totN=res.reduce((s,x)=>s+x.pn.p,0),cred=res.reduce((s,x)=>s+x.r.B,0);
+  const delta=totN-totC,pct=delta/totC*100;
+  const gain=res.filter(x=>x.pn.p-x.pc.p>.5).length,lose=res.filter(x=>x.pn.p-x.pc.p<-.5).length;
+  const capped=res.filter(x=>x.pn.capped).length,top=Math.max(...res.map(x=>x.pn.p));
+  $('kpis').innerHTML=[
+    ['Current payout',$$(totC),''],['Proposed payout',$$(totN),''],
+    ['Change',S$(delta)+' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)',Math.abs(pct)<1?'good':(delta>0?'bad':'warn')],
+    ['Cost of sale',(totN/cred*100).toFixed(1)+'%',''],
+    ['Reps who gain or lose',gain+' up, '+lose+' down',''],
+    ['Reps at the cap',capped,capped?'warn':'']
+  ].map(([a,b,c])=>`<div class="kpi ${c}"><small>${a}</small><b>${b}</b></div>`).join('');
+  const sorted=[...res].sort((p,q)=>p.a-q.a),below=[...sorted].filter(x=>x.a<1).pop(),above=sorted.find(x=>x.a>=1);
+  const ins=$('insight');let txt='The proposed plan pays '+$$(Math.abs(delta))+(delta>=0?' more':' less')+' than the current one ('+(pct>=0?'+':'')+pct.toFixed(1)+'%), at a cost of sale of '+(totN/cred*100).toFixed(1)+'% of credited bookings. ';
+  let cls=Math.abs(pct)<2?'good':'warn';
+  if(P.retro&&below&&above){const d=above.pn.p-below.pn.p;txt+='The cliff: '+below.r.name+' at '+(below.a*100).toFixed(1)+'% attainment earns '+$$(below.pn.p)+', while '+above.r.name+' at '+(above.a*100).toFixed(1)+'% earns '+$$(above.pn.p)+'. That is '+$$(d)+' more for '+((above.a-below.a)*100).toFixed(1)+' points of attainment.';cls='bad'}
+  else if(capped){txt+=capped+(capped===1?' rep hits':' reps hit')+' the cap, so the top of the curve flattens and the plan stops rewarding the best performers.';cls='warn'}
+  else if(P.claw){const c=res.reduce((s,x)=>s+(P.rate/100)*x.r.churn,0);txt+='Clawback reverses about '+$$(c)+' on deals that churned early, which shifts cost from the company to the reps who closed them.'}
+  else if(P.dec<1){txt+='The decelerator only touches reps below half of quota, so its savings are small next to the other levers.'}
+  ins.className='insight '+cls;ins.textContent=txt;
+  drawCurve(reps,res);drawBars(res);
+  $('curvehelp').textContent=P.retro?'With a retroactive accelerator the curve jumps at 100% attainment. A rep just below quota and a rep just above it are paid very differently for nearly the same work.':'The curve is continuous, so a small change in attainment never produces a large change in pay.';
+  $('rows').innerHTML=res.map(x=>{
+    const ch=x.pn.p-x.pc.p,f=[];
+    if(x.pn.capped)f.push('<span class="tag bad">Capped</span>');
+    if(P.retro&&x.a>=1&&x.a<1.06)f.push('<span class="tag bad">Cliff windfall</span>');
+    if(P.claw&&x.r.churn>0)f.push('<span class="tag warn">Clawback</span>');
+    if(P.dec<1&&x.a<.5)f.push('<span class="tag warn">Decelerated</span>');
+    if(x.r.splits)f.push('<span class="tag">'+x.r.splits+' split</span>');
+    return `<tr><td>${x.r.name}</td><td>${$$(x.r.Q)}</td><td>${$$(x.r.B)}</td><td>${(x.a*100).toFixed(1)}%</td><td>${$$(x.pc.p)}</td><td>${$$(x.pn.p)}</td><td class="${ch>.5?'up':ch<-.5?'dn':''}">${Math.abs(ch)<.5?'0':S$(ch)}</td><td class="l">${f.join('')}</td></tr>`;
+  }).join('');
+}
+['rate','acc','dec','cap','kick'].forEach(k=>$(k).addEventListener('input',e=>{P[k]=+e.target.value;render()}));
+['retro','claw'].forEach(k=>$(k).addEventListener('change',e=>{P[k]=e.target.checked;render()}));
+Object.keys(PRESETS).forEach(k=>{const b=document.createElement('button');b.className='btn';b.dataset.k=k;b.textContent=k;b.onclick=()=>{Object.assign(P,PRESETS[k]);render()};$('presets').append(b)});
+$('reseed').onclick=()=>{seed=Math.floor(Math.random()*9000)+1;render()};
+render();
+</script>
+</body>
+</html>

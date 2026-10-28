@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Financial Services Cloud: Implementation Sequence Planner | Andres Videla</title>
+<meta name="description" content="An interactive reference sequence for a Financial Services Cloud implementation, from discovery to hypercare, covering person accounts, households, financial accounts, rollups, compliant data sharing and data loads, each step tagged as documented or delivery practice.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://andres-videla.com/demo/financial-services-cloud-implementation-sequence/">
+<link rel="canonical" href="https://andres-videla.com/demo/financial-services-cloud-implementation-sequence/">
+<meta property="og:title" content="Salesforce Financial Services Cloud: Implementation Sequence Planner">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Choose a starting point, scope and complexity drivers, and get a six-phase Financial Services Cloud sequence with dependencies, deliverables and exit gates.">
+<meta property="og:image" content="https://andres-videla.com/assets/financial-services-cloud-implementation-sequence-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+h3{font-size:16px;margin:0 0 4px}
+.lede{color:var(--muted);max-width:780px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+button{font:inherit;cursor:pointer;color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.grp{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.grp.first{margin-top:0;padding-top:0;border-top:0}
+.grp>b{display:block;font-size:14px;margin-bottom:2px}
+.grp>small{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+.tog{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}
+.tog input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tog span{font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:12.5px;line-height:1.4}
+.tog.off{opacity:.45;cursor:not-allowed}
+.sum{font-size:15px;margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);min-width:0}
+.kpi .n{font-size:21px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.ok .n{color:var(--ok)}
+.path{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 16px;padding:0;list-style:none}
+.path li{font-size:13px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 10px}
+.path li.sep{border:0;background:none;padding:0;color:var(--muted)}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.btn{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);height:36px;line-height:1;padding:0 12px;border-radius:8px;font-size:14px;font-weight:600}
+.btn.alt{border-color:var(--line);background:var(--surface);color:var(--ink);font-weight:400}
+details.ph{border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:10px}
+details.ph>summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:15px;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}
+details.ph>summary::-webkit-details-marker{display:none}
+details.ph>summary .pc{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+details.ph>summary .pn{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);align-items:center;justify-content:center;font-size:12px;margin-right:8px;flex:none}
+details.ph[open]>summary{border-bottom:1px solid var(--line)}
+.steps{list-style:none;margin:0;padding:6px 12px 12px}
+.step{border-bottom:1px solid var(--line);padding:10px 0}
+.step:last-child{border-bottom:0}
+.step label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.step input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.step b{font-size:14px}
+.step .d{display:block;font-size:13px;color:var(--muted);margin:2px 0 4px}
+.step .m{display:block;font-size:12.5px;color:var(--muted);margin:2px 0}
+.step .m i{font-style:normal;font-weight:600;color:var(--ink)}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.tag.doc{background:var(--ok-soft);color:var(--ok)} .tag.prac{background:var(--accent-soft);color:var(--accent)} .tag.add{background:var(--warn-soft);color:var(--warn)}
+.srcs a{font-size:12px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.real{margin-top:28px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+footer{margin-top:32px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce Financial Services Cloud: Implementation Sequence Planner</h1>
+  <p class="lede">Financial services implementations rarely fail on a feature. They fail on order: households designed before the client model is settled, rollups switched on during a bulk load, data sharing added after the data is already in. Pick a starting point, scope and complexity drivers, and get a six-phase sequence with dependencies, deliverables and exit gates.</p>
+  <div class="notice">This planner uses no customer data. It assembles public Salesforce documentation and delivery practice into a sequence. Steps tagged Documented come from the pages listed in the references. Steps tagged Practice are delivery recommendations, not vendor requirements. The product is documented as Agentforce Financial Services, formerly Financial Services Cloud, and names change between releases. Nothing here is regulatory or compliance advice, because requirements vary by jurisdiction and institution.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-c">
+        <h2 id="t-c">Starting point and scope</h2>
+        <div class="grp first">
+          <b>Starting point</b>
+          <div class="chips" role="group" aria-label="Starting point">
+            <button class="chip" data-m="new" aria-pressed="true">New implementation</button>
+            <button class="chip" data-m="mig" aria-pressed="false">Migration from an existing model</button>
+          </div>
+          <small>Existing model means the individual model or the managed package financial account objects.</small>
+        </div>
+        <div class="grp">
+          <b>Scope</b>
+          <small>Households, relationships, financial accounts and rollups are always in scope.</small>
+          <label class="tog"><input type="checkbox" id="cds"><span>Compliant Data Sharing<small>Participant roles and groups that control who sees which records.</small></span></label>
+          <label class="tog"><input type="checkbox" id="act"><span>Action plans and interaction summaries<small>Repeatable tasks and meeting records for advisors.</small></span></label>
+          <label class="tog"><input type="checkbox" id="plan"><span>Financial plans and goals<small>Plans and goals for a person or a household.</small></span></label>
+          <label class="tog"><input type="checkbox" id="ins"><span>Insurance policies and claims<small>Household summaries for policies and claims.</small></span></label>
+        </div>
+        <div class="grp">
+          <b>Complexity drivers</b>
+          <small>Each one adds work to the sequence.</small>
+          <label class="tog"><input type="checkbox" id="vol"><span>High volumes of financial accounts and transactions</span></label>
+          <label class="tog"><input type="checkbox" id="multi"><span>Multiple source systems</span></label>
+          <label class="tog"><input type="checkbox" id="integ"><span>Extensive integrations</span></label>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-r">
+        <h2 id="t-r">Your sequence</h2>
+        <p class="sum" id="sum" aria-live="polite"></p>
+        <div class="kpis" id="kpis"></div>
+        <h2>Order of the main workstreams</h2>
+        <ol class="path" id="path" aria-label="Order of the main workstreams"></ol>
+        <div class="acts">
+          <button class="btn" id="b-copy" type="button">Copy as checklist</button>
+          <button class="btn alt" id="b-dl" type="button">Download checklist</button>
+          <button class="btn alt" id="b-open" type="button">Expand all</button>
+          <button class="btn alt" id="b-close" type="button">Collapse all</button>
+        </div>
+        <div id="phases"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid">
+      <div><b>Data sources</b><ul>
+        <li>The target org: installed packages, licenses, permission set licenses and the current client and financial account model.</li>
+        <li>Exports from core banking, wealth, insurance and CRM systems, with the keys that join them.</li>
+        <li>The institution's own access and conduct policies, written down before roles are designed.</li>
+        <li>For a migration, the existing individual-model or managed package records and their field mappings.</li>
+      </ul></div>
+      <div><b>Limits and prerequisites</b><ul>
+        <li>Users need both a permission set and a permission set license, and the available licenses depend on what was purchased.</li>
+        <li>Enabling person accounts needs specific permissions and editions: confirm in the target org.</li>
+        <li>Compliant Data Sharing documents a maximum of 10 active participant roles per enabled object. Confirm participant limits in the current admin guide.</li>
+        <li>Bulk loads run more slowly while rollups are enabled, and documented rollup limitations should be rechecked against current documentation.</li>
+      </ul></div>
+      <div><b>How it would be validated</b><ul>
+        <li>Reconcile household totals against the source systems for a labeled sample of clients.</li>
+        <li>Test access with real user profiles: each role sees what the policy allows and nothing more.</li>
+        <li>Rehearse the full load in a staging org and compare counts at every step.</li>
+        <li>Recalculate rollups after loads and compare the results with independent sums.</li>
+      </ul></div>
+    </div>
+    <p class="rnote">What this demo does not claim: durations, staffing, cost, success rates or readiness scores. It is not regulatory or compliance advice. It is a planning aid built from public documentation and delivery practice, and it does not replace a discovery of the actual org.</p>
+    <p class="rnote" id="refs">References: <a href="https://help.salesforce.com/s/articleView?id=ind.group_membership_how_fsc_cloud_models_groups_relationships.htm&amp;language=en_US&amp;type=5">How Financial Services Cloud models groups and relationships</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_data_model_individual_client.htm">How a person is modeled</a>, <a href="https://help.salesforce.com/s/articleView?id=ind.fsc_admin_enable_person_acct.htm&amp;language=en_US&amp;type=5">Enable and configure person accounts</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=ind.fsc_general_view_and_assign_permission_set_licenses_in_financial_services_cloud.htm&amp;type=5">Permission set licenses</a>, <a href="https://help.salesforce.com/s/articleView?id=ind.fsc_admin_cds.htm&amp;type=5">Compliant Data Sharing</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_cds_manage_roles.htm">Manage participant roles</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_rollups_in_fsc.htm">Rollups</a>, <a href="https://help.salesforce.com/s/articleView?id=ind.fsc_admin_rollups_rbl_data_loads.htm&amp;type=5">Rollups, rollup by lookup and data loads</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.234.0.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_recalculate_rbl_with_apex.htm">Recalculate rollup by lookup summaries with Apex</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=sf.fsc_insurance_admin_policy_claim_rbl.htm&amp;type=5">Policy and claim rollups at household level</a>, <a href="https://help.salesforce.com/s/articleView?id=sf.fsc_action_plans.htm&amp;language=en_US&amp;type=5">Action plans</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_work_with_interaction_summaries.htm">Work with interaction summaries</a>, <a href="https://help.salesforce.com/s/articleView?id=ind.fsc_admin_create_financial_plan.htm&amp;language=en_US&amp;type=5">Create a financial plan and goals</a>, <a href="https://help.salesforce.com/s/articleView?id=sf.fsc_admin_data_loader_upload_sequence.htm&amp;language=en_US&amp;type=5">Work with data in Financial Services Cloud</a>, <a href="https://help.salesforce.com/s/articleView?id=ind.fsc_financial_account_field_mapping.htm&amp;language=en_US&amp;type=5">Field mapping for financial account</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=ind.fsc_admin_overview.htm&amp;type=5">Plan and prepare for your implementation</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Salesforce, Financial Services Cloud and Agentforce are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by Salesforce.</footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var REF={grp:["How Financial Services Cloud models groups and relationships","https://help.salesforce.com/s/articleView?id=ind.group_membership_how_fsc_cloud_models_groups_relationships.htm&language=en_US&type=5"],per:["How a person is modeled","https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_data_model_individual_client.htm"],pa:["Enable and configure person accounts","https://help.salesforce.com/s/articleView?id=ind.fsc_admin_enable_person_acct.htm&language=en_US&type=5"],psl:["Permission set licenses","https://help.salesforce.com/s/articleView?language=en_US&id=ind.fsc_general_view_and_assign_permission_set_licenses_in_financial_services_cloud.htm&type=5"],cds:["Compliant Data Sharing","https://help.salesforce.com/s/articleView?id=ind.fsc_admin_cds.htm&type=5"],cdr:["Manage participant roles","https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_cds_manage_roles.htm"],rol:["Rollups","https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_rollups_in_fsc.htm"],rbl:["Rollups, rollup by lookup and data loads","https://help.salesforce.com/s/articleView?id=ind.fsc_admin_rollups_rbl_data_loads.htm&type=5"],rec:["Recalculate rollup by lookup summaries with Apex","https://developer.salesforce.com/docs/atlas.en-us.234.0.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_admin_recalculate_rbl_with_apex.htm"],ins:["Policy and claim rollups at household level","https://help.salesforce.com/s/articleView?language=en_US&id=sf.fsc_insurance_admin_policy_claim_rbl.htm&type=5"],act:["Action plans","https://help.salesforce.com/s/articleView?id=sf.fsc_action_plans.htm&language=en_US&type=5"],isu:["Work with interaction summaries","https://developer.salesforce.com/docs/atlas.en-us.financial_services_cloud_admin_guide.meta/financial_services_cloud_admin_guide/fsc_work_with_interaction_summaries.htm"],fp:["Create a financial plan and goals","https://help.salesforce.com/s/articleView?id=ind.fsc_admin_create_financial_plan.htm&language=en_US&type=5"],load:["Work with data in Financial Services Cloud","https://help.salesforce.com/s/articleView?id=sf.fsc_admin_data_loader_upload_sequence.htm&language=en_US&type=5"],map:["Field mapping for financial account","https://help.salesforce.com/s/articleView?id=ind.fsc_financial_account_field_mapping.htm&language=en_US&type=5"],prep:["Plan and prepare for your implementation","https://help.salesforce.com/s/articleView?language=en_US&id=ind.fsc_admin_overview.htm&type=5"]};
+  var PH=["Discover","Design","Build the foundation","Load and connect","Validate and cut over","Hypercare"];
+  var S=[
+    {p:0,t:"Verify licenses and permission set licenses",d:"Users need both a permission set and a permission set license. Which licenses exist depends on the product and add-ons purchased, and they are listed under Company Information in Setup.",a:"License and permission set matrix by role",g:"Every role has a verified permission set and license, checked in the target org.",k:"doc",src:["psl"],c:"all"},
+    {p:0,t:"Choose the client model: person accounts",d:"Person accounts are described as the preferred way to model individual clients and are enabled in new installations. The individual model is supported only for orgs that already use it.",a:"Client model decision record",g:"Sponsors and architects agree the client model before any design starts.",k:"doc",src:["per","pa"],c:"new"},
+    {p:0,t:"Decide whether to move from the individual model to person accounts",d:"Existing individual-model orgs can migrate to person accounts. Treat it as a decision with its own scope, not a side effect of the project.",a:"Migration decision and scope",g:"The decision is recorded with its impact on integrations and reports.",k:"doc",src:["per"],c:"mig"},
+    {p:0,t:"Inventory the existing model and its mapping gaps",d:"Financial accounts can use standard objects or managed package objects. When moving to the standard model, some fields have no direct equivalent: address and balance fields move to separate objects, the record type is not carried over, and the primary and joint owner lookups have no standard mapping.",a:"Field inventory with mapping status",g:"Every field is mapped, moved, rebuilt or retired, with an owner.",k:"doc",src:["map","per"],c:"mig"},
+    {p:0,t:"Define client segments, households and relationship types",d:"A household is a business account paired with a party relationship group of the household type. A person account can belong to several groups but has one primary group.",a:"Segment, household and relationship definitions",g:"Each segment has written rules for who is in a household and which one is primary.",k:"doc",src:["grp"],c:"all"},
+    {p:0,t:"Write down the access rules before designing roles",d:"List who may see which clients, deals and interactions, from your own policy and compliance function, not from the tool.",a:"Access policy summary",g:"Compliance has reviewed and owns the access rules.",k:"prac",src:[],c:"cds"},
+    {p:0,t:"Scope insurance entities",d:"Household-level summaries exist for policies and claims. Decide which insurance records are in scope and who consumes the summaries.",a:"Insurance scope statement",g:"Every insurance object in scope has an owner and a consumer.",k:"doc",src:["ins"],c:"ins"},
+    {p:0,t:"Measure the volumes in each source",d:"Count clients, financial accounts, holdings and transactions per source, because bulk loads run more slowly while rollups are enabled.",a:"Volume baseline per source",g:"Volumes are measured in the source, not estimated.",k:"doc",src:["rbl"],c:"vol",add:"High volumes"},
+    {p:0,t:"Define one key per client and account across sources",d:"Agree the identifiers that join every source system to the new model before mapping starts.",a:"Cross-source key definition",g:"Each source maps to a single client key and a single financial account key.",k:"prac",src:[],c:"multi",add:"Multiple source systems"},
+    {p:0,t:"Inventory integrations and their contracts",d:"For each system that sends or receives client or account data, list direction, payload, volume and failure behavior.",a:"Integration inventory",g:"Every integration has an owner and a documented contract.",k:"prac",src:[],c:"integ",add:"Extensive integrations"},
+
+    {p:1,t:"Design the person and household model",d:"Households link members through account contact relations. A person account can be in several groups with one primary group, which matters for rollups.",a:"Household and membership design",g:"Edge cases such as a person in two households have a written rule.",k:"doc",src:["grp"],c:"all"},
+    {p:1,t:"Design relationships and roles",d:"Person-to-person ties use contact contact relation records, each paired with a party role relationship record that names the role.",a:"Relationship type catalog",g:"Each relationship type used in the business has a defined role pair.",k:"doc",src:["grp"],c:"all"},
+    {p:1,t:"Design financial accounts and their parties",d:"Financial accounts can use standard objects or managed package objects. A financial account role links a contact, an account and a financial account, with a role and an active flag.",a:"Financial account and role model",g:"The standard or managed package choice is recorded with its trade-offs.",k:"doc",src:["per","load"],c:"all"},
+    {p:1,t:"Design rollups",d:"Client-level rollups work by default and group-level rollups must be enabled. Rollup by lookup rules support sum, max, min, average and count, and household financial summaries are stored in the account financial summary object.",a:"Rollup catalog: what is summed, at which level, from where",g:"Every rollup has a source field, a level, an owner and a reconciliation source.",k:"doc",src:["rol","rbl"],c:"all"},
+    {p:1,t:"Design Compliant Data Sharing",d:"Participant roles carry access levels and apply to one object. Documentation lists a maximum of 10 active roles per enabled object, groups can nest, and a user with a role or group membership cannot be deactivated until those records are removed.",a:"Role, group and access level matrix",g:"Compliance signs the matrix, and the role count stays within the documented limit.",k:"doc",src:["cds","cdr"],c:"cds"},
+    {p:1,t:"Design action plan templates",d:"A template holds the repeatable tasks of a recurring engagement. Supported objects include account, contact, financial account and financial goal.",a:"Template catalog",g:"Each template has an owner and a trigger.",k:"doc",src:["act"],c:"act"},
+    {p:1,t:"Design interaction summaries",d:"Interaction summaries capture meeting notes, a confidentiality level and action items, and can link related records.",a:"Interaction summary design",g:"Confidentiality levels are agreed with compliance.",k:"doc",src:["isu"],c:"act"},
+    {p:1,t:"Design financial plans and goals",d:"A financial plan is created for a person account or a household, and goals are linked to a plan. The documented permissions include Financial Services Cloud Extension or FSC Sales plus OmniStudio.",a:"Plan and goal model",g:"Required licenses and permissions are confirmed in the org.",k:"doc",src:["fp"],c:"plan"},
+    {p:1,t:"Map existing fields to the standard model and decide each gap",d:"For fields with no direct equivalent, decide whether to move them to another object, rebuild them or retire them.",a:"Mapping specification with decisions",g:"No unmapped field remains without a decision.",k:"prac",src:["map"],c:"mig"},
+    {p:1,t:"Define the environment and deployment strategy",d:"Plan sandboxes, the order of configuration deployments and how data loads are rehearsed.",a:"Environment map and runbook",g:"The team can rebuild configuration in a fresh org from the runbook.",k:"prac",src:[],c:"all"},
+    {p:1,t:"Specify integration contracts",d:"For each integration, define the payload, the key, the failure behavior and the owner.",a:"Contract per integration",g:"Each contract names the key and the retry behavior.",k:"prac",src:[],c:"integ",add:"Extensive integrations"},
+
+    {p:2,t:"Enable person accounts",d:"The help article describes enabling the Use Person Account custom setting, removing Individual record type assignments from profiles and enabling person account record types, without deactivating the Individual record type for Account or Contact. It requires specific editions and the Customize Application and View All Profiles permissions.",a:"Person account configuration",g:"A test person account can be created by each relevant profile.",k:"doc",src:["pa"],c:"all"},
+    {p:2,t:"Assign permission sets and licenses",d:"Assign the permission sets and permission set licenses from the matrix. Some licenses are assigned with the permission set and others directly to the user.",a:"Assignment log",g:"Test users for each role can sign in and see the intended features.",k:"doc",src:["psl"],c:"all"},
+    {p:2,t:"Build households and relationship types",d:"Configure the household construction and the relationship types from the design, and test with the edge cases.",a:"Configured household model",g:"Sample households from discovery build and display correctly.",k:"doc",src:["grp"],c:"all"},
+    {p:2,t:"Build the financial account model and roles",d:"Configure financial accounts, the parties on them and the role picklist from the design.",a:"Configured financial account model",g:"A sample account with joint holders and an advisor shows the right parties.",k:"doc",src:["per"],c:"all"},
+    {p:2,t:"Enable and configure rollups",d:"Group-level rollups must be enabled and then stamp the primary group into a household lookup, which should not be edited by hand. Rollup by lookup rules need the group rollup and rollup summary custom settings, an included record type and a true filter.",a:"Rollup configuration",g:"Test records roll up to the client and the household as designed.",k:"doc",src:["rol","rbl"],c:"all"},
+    {p:2,t:"Enable Compliant Data Sharing and build roles and groups",d:"Enable it for the chosen objects, then define participant roles with access levels and groups. Creating roles requires the Configure Compliant Data Sharing permission.",a:"Sharing configuration",g:"Each role gives exactly the access in the matrix on a test record.",k:"doc",src:["cds","cdr"],c:"cds"},
+    {p:2,t:"Set up action plans and interaction summaries",d:"Add the Action Plan Templates and Action Plans tabs through the app, add the related list to the page layout and assign the action plans permission set. Add the interaction summaries component to the account page.",a:"Configured advisor workspace",g:"An advisor can create an action plan from a template and log an interaction.",k:"doc",src:["act","isu"],c:"act"},
+    {p:2,t:"Configure financial plans and goals",d:"Create plans and goals for a person account and a household with the required permissions.",a:"Configured plan and goal model",g:"A test plan with linked goals appears on the client page.",k:"doc",src:["fp"],c:"plan"},
+    {p:2,t:"Activate the household policy and claim summaries",d:"Add the provided summaries to the household page layout and activate the matching rollup rules.",a:"Insurance household view",g:"Policy and claim counts on a test household match the source records.",k:"doc",src:["ins"],c:"ins"},
+
+    {p:3,t:"Load data in the documented order",d:"Salesforce recommends loading individuals and related records first, then charges and fees, then financial accounts, with financial holdings last. Accounts come before contacts in the individual model, and naming should stay consistent. Roles reference their parents, so load them after those records exist.",a:"Load plan in dependency order",g:"Each load is reconciled before the next one starts.",k:"doc",src:["load"],c:"all"},
+    {p:3,t:"Control rollups during large loads, then recalculate",d:"Bulk loads and group builder updates are queued and run more slowly when rollups are enabled, so rollups can be disabled for a large load. Rollup summaries can then be recalculated from the interface or with Apex.",a:"Load runbook with rollup switch and recalculation step",g:"After the recalculation, rollups match independent sums.",k:"doc",src:["rbl","rec"],c:"vol",add:"High volumes"},
+    {p:3,t:"Avoid overwriting calculated fields",d:"Do not load transaction data that overrides fields calculated by the platform, because it changes other values and rollups.",a:"Field-level load rules",g:"Calculated fields are excluded from every load file.",k:"doc",src:["load"],c:"all"},
+    {p:3,t:"Migrate to the standard model using the mapping",d:"Apply the mapping decisions, including the fields that move to separate objects and the ones with no direct equivalent.",a:"Migration scripts and load logs",g:"Every mapped field is validated on a labeled sample.",k:"doc",src:["map"],c:"mig"},
+    {p:3,t:"Load participants after roles and groups exist",d:"Load participant records only after the roles, groups and the users they reference exist.",a:"Participant load files",g:"A sample of clients shows the expected participants.",k:"prac",src:[],c:"cds"},
+    {p:3,t:"Consolidate sources before loading",d:"Resolve duplicate clients and accounts across sources using the agreed keys.",a:"Consolidated source datasets",g:"No client appears under two keys.",k:"prac",src:[],c:"multi",add:"Multiple source systems"},
+    {p:3,t:"Connect and test each integration end to end",d:"Run each integration with realistic payloads and the agreed contract, including failure cases.",a:"Integration test results",g:"Every integration passes its contract tests in a staging org.",k:"prac",src:[],c:"integ",add:"Extensive integrations"},
+
+    {p:4,t:"Reconcile household and account totals against the sources",d:"Compare counts and balances between the source systems and the new model for a labeled sample, and investigate every difference.",a:"Reconciliation report",g:"Every difference is explained or fixed.",k:"prac",src:[],c:"all"},
+    {p:4,t:"Test rollups with people in several groups",d:"The documented limitations include group rollup summaries that may not update when a person belongs to multiple groups. Confirm the current behavior in the target org and design around it.",a:"Rollup edge case results",g:"Each edge case has a confirmed behavior and a decision.",k:"doc",src:["rol"],c:"all"},
+    {p:4,t:"Test access with real profiles",d:"Sign in as users in each role and verify that each sees what the policy allows and nothing more. Include the deactivation case for users with roles or groups.",a:"Access test results",g:"Compliance reviews and accepts the results.",k:"doc",src:["cdr"],c:"cds"},
+    {p:4,t:"Rehearse the full load in staging",d:"Run the complete load sequence in a staging org, including rollup recalculation, and compare counts at each step.",a:"Rehearsal log",g:"The rehearsal completes from the runbook without manual fixes.",k:"prac",src:[],c:"all"},
+    {p:4,t:"Agree the cutover plan and the rollback decision point",d:"Sequence the cutover steps, assign owners and define what would trigger a rollback.",a:"Cutover plan",g:"Business and technical owners both sign the plan.",k:"prac",src:[],c:"all"},
+
+    {p:5,t:"Recalculate rollups when sources change",d:"After corrections or late data, recalculate rollup summaries and recheck household totals.",a:"Recalculation routine",g:"An owner runs and checks the routine on a schedule.",k:"doc",src:["rec"],c:"all"},
+    {p:5,t:"Review data quality weekly",d:"Look for households without a primary group, clients in two households and orphaned financial accounts.",a:"Data quality checks",g:"Each finding has an owner and a due date.",k:"prac",src:[],c:"all"},
+    {p:5,t:"Review access exceptions and role changes",d:"Review who holds which participant roles and group memberships, and remove entries before deactivating users.",a:"Access review routine",g:"Compliance reviews the access report on a schedule.",k:"doc",src:["cdr"],c:"cds"},
+    {p:5,t:"Hand over runbooks, owners and a backlog",d:"Close with documented runbooks, named owners for the client model, rollups, access and integrations, and a prioritized backlog.",a:"Handover pack",g:"Operations can run a load, a recalculation and an access review without the build team.",k:"prac",src:[],c:"all"}
+];
+  var state={m:"new"};
+  var done={};
+  function on(c,s){
+    if(c==="all") return true;
+    return c.split("+").every(function(k){ if(k==="mig") return s.m==="mig"; if(k==="new") return s.m==="new"; return !!s[k]; });
+  }
+  function read(){return {m:state.m,cds:$("cds").checked,act:$("act").checked,plan:$("plan").checked,ins:$("ins").checked,vol:$("vol").checked,multi:$("multi").checked,integ:$("integ").checked}}
+  function visible(s){return S.map(function(x,i){x.i=i;return x}).filter(function(x){return on(x.c,s)})}
+  function toast(m){var t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(function(){t.classList.remove("on")},1800)}
+  function render(){
+    var s=read(), vs=visible(s);
+    var openState={}; document.querySelectorAll("details.ph").forEach(function(d){openState[d.dataset.p]=d.open});
+    var nd=vs.filter(function(x){return x.k==="doc"}).length, na=vs.filter(function(x){return x.add}).length, nc=vs.filter(function(x){return done[x.i]}).length;
+    $("sum").textContent=vs.length+" steps across 6 phases. "+nd+" are tied to Salesforce documentation and "+(vs.length-nd)+" are delivery practice. "+na+" were added by the drivers you selected. You have marked "+nc+" as cleared.";
+    $("kpis").innerHTML='<div class="kpi"><div class="n">'+vs.length+'</div><div class="l">Steps and gates</div></div><div class="kpi"><div class="n">'+nd+'</div><div class="l">Documented</div></div><div class="kpi"><div class="n">'+na+'</div><div class="l">Added by drivers</div></div><div class="kpi '+(nc===vs.length&&vs.length?"ok":"")+'"><div class="n">'+nc+' / '+vs.length+'</div><div class="l">Gates cleared by you</div></div>';
+    var path=["Licenses and client model","Households and relationships","Financial accounts","Rollups"]; if(s.cds) path.push("Compliant Data Sharing"); if(s.act) path.push("Action plans and interactions"); if(s.plan) path.push("Plans and goals"); if(s.ins) path.push("Insurance rollups"); path.push("Load and reconcile"); path.push("Cutover");
+    $("path").innerHTML=path.map(function(p,i){return (i?'<li class="sep" aria-hidden="true">then</li>':'')+'<li>'+p+'</li>'}).join("");
+    $("phases").innerHTML=PH.map(function(name,pi){
+      var ps=vs.filter(function(x){return x.p===pi}), c=ps.filter(function(x){return done[x.i]}).length;
+      var open=openState[pi]!==undefined?openState[pi]:pi===0;
+      return '<details class="ph" data-p="'+pi+'"'+(open?" open":"")+'><summary><span><span class="pn">'+(pi+1)+'</span>'+name+'</span><span class="pc">'+c+' / '+ps.length+'</span></summary><ul class="steps">'+ps.map(function(x){
+        var links=x.src.map(function(k){return '<a href="'+REF[k][1]+'">'+REF[k][0]+'</a>'}).join(", ");
+        return '<li class="step"><label><input type="checkbox" data-i="'+x.i+'"'+(done[x.i]?" checked":"")+'><span><b>'+x.t+'</b><span class="tag '+(x.k==="doc"?"doc":"prac")+'">'+(x.k==="doc"?"Documented":"Practice")+'</span>'+(x.add?'<span class="tag add">Added: '+x.add+'</span>':"")+'<span class="d">'+x.d+'</span><span class="m"><i>Deliverable:</i> '+x.a+'</span><span class="m"><i>Exit gate:</i> '+x.g+'</span>'+(links?'<span class="m srcs"><i>Source:</i> '+links+'</span>':"")+'</span></label></li>';
+      }).join("")+'</ul></details>';
+    }).join("");
+    document.querySelectorAll('.step input').forEach(function(b){b.addEventListener("change",function(){done[+b.dataset.i]=b.checked;var f=b.dataset.i;render();var nb=document.querySelector('.step input[data-i="'+f+'"]');if(nb)nb.focus()})});
+  }
+  function md(){
+    var s=read(), vs=visible(s), out=["# Financial Services Cloud implementation sequence","","Starting point: "+(s.m==="mig"?"migration from an existing model":"new implementation"),""];
+    PH.forEach(function(name,pi){var ps=vs.filter(function(x){return x.p===pi}); out.push("## "+(pi+1)+". "+name,""); ps.forEach(function(x){out.push("- ["+(done[x.i]?"x":" ")+"] "+x.t+" ("+(x.k==="doc"?"documented":"practice")+")","  - Deliverable: "+x.a,"  - Exit gate: "+x.g)}); out.push("")});
+    out.push("Generated from a reference sequence. Confirm every item in your own org and in current Salesforce documentation. Not regulatory or compliance advice.");
+    return out.join("\n");
+  }
+  document.querySelectorAll(".chip").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");state.m=b.dataset.m;render()})});
+  ["cds","act","plan","ins","vol","multi","integ"].forEach(function(id){$(id).addEventListener("change",render)});
+  $("b-open").addEventListener("click",function(){document.querySelectorAll("details.ph").forEach(function(d){d.open=true})});
+  $("b-close").addEventListener("click",function(){document.querySelectorAll("details.ph").forEach(function(d){d.open=false})});
+  $("b-copy").addEventListener("click",function(){
+    var t=md();
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast("Checklist copied")},function(){toast("Copy is not available here, use Download")}); return} }catch(e){}
+    toast("Copy is not available here, use Download");
+  });
+  $("b-dl").addEventListener("click",function(){
+    try{var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([md()],{type:"text/markdown"}));a.download="financial-services-cloud-implementation-checklist.md";document.body.appendChild(a);a.click();a.remove();toast("Checklist downloaded")}catch(e){toast("Download is not available here")}
+  });
+  render();
+})();
+</script>
+</body>
+</html>

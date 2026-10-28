@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Forecasting: Roll-Up What-If | Andres Videla</title>
+<meta name="description" content="A Lightning-style forecast grid with fictional data. Select a rep or manager row, then drop a deal from the quarter or pull one in, and trace how Commit, Best Case and Pipeline move up the hierarchy.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Salesforce Forecasting: Roll-Up What-If">
+<meta property="og:url" content="https://andres-videla.com/demo/forecast-rollup-what-if/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Select a row in the forecast grid, drop a deal or pull one in, and see which rollup columns change for the rep, the manager and the VP total.">
+<meta property="og:image" content="https://andres-videla.com/assets/forecast-rollup-what-if-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6; --accent:#2F4B6E;
+  --line:#DCE0E6;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --fc-bg:#F3F3F3; --fc-card:#FFFFFF; --fc-line:#DDDBDA; --fc-ink:#181818; --fc-muted:#5C5C5C; --fc-soft:#FAFAF9;
+  --fc-brand:#0176D3; --fc-brand-ink:#FFFFFF; --fc-hover:#F3F3F3; --fc-sel:#EAF5FE; --fc-up:#0B5A24; --fc-dn:#BA0517;
+  --fc-ok-bg:#CDEFC4; --fc-ok:#0B5A24; --fc-warn-bg:#FFE9B5; --fc-warn:#6B4A00; --fc-err-bg:#FEDED8; --fc-err:#8E030B;
+  --fc-info-bg:#E5F2FD; --fc-info:#014486; --fc-ico:#F59E0B; --fc-mark:#FFF1A8;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946; --accent:#8FB3E6; --line:#2F3946; color-scheme:dark;
+    --fc-bg:#12161C; --fc-card:#1C222B; --fc-line:#333B47; --fc-ink:#E7EBF1; --fc-muted:#9AA6B5; --fc-soft:#232A34;
+    --fc-brand:#5EB0F5; --fc-brand-ink:#0B1622; --fc-hover:#232A34; --fc-sel:#16324B; --fc-up:#8BE0A8; --fc-dn:#F58B82;
+    --fc-ok-bg:#1C3A28; --fc-ok:#8BE0A8; --fc-warn-bg:#3D2F15; --fc-warn:#F0C27A; --fc-err-bg:#43201E; --fc-err:#FBA39B;
+    --fc-info-bg:#14304A; --fc-info:#9CCBF5; --fc-mark:#5A4B12;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946; --accent:#8FB3E6; --line:#2F3946; color-scheme:dark;
+  --fc-bg:#12161C; --fc-card:#1C222B; --fc-line:#333B47; --fc-ink:#E7EBF1; --fc-muted:#9AA6B5; --fc-soft:#232A34;
+  --fc-brand:#5EB0F5; --fc-brand-ink:#0B1622; --fc-hover:#232A34; --fc-sel:#16324B; --fc-up:#8BE0A8; --fc-dn:#F58B82;
+  --fc-ok-bg:#1C3A28; --fc-ok:#8BE0A8; --fc-warn-bg:#3D2F15; --fc-warn:#F0C27A; --fc-err-bg:#43201E; --fc-err:#FBA39B;
+  --fc-info-bg:#14304A; --fc-info:#9CCBF5; --fc-mark:#5A4B12;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);overflow-wrap:anywhere}
+:focus-visible{outline:2px solid var(--fc-brand);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.back{color:var(--accent);display:inline-block;margin-bottom:14px;font-size:14px}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 20px 48px}
+h1{font:700 clamp(1.6rem,3.6vw,2.4rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:50rem;margin:0 0 14px}
+.cap{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+
+.fc{position:relative;background:var(--fc-bg);color:var(--fc-ink);border:1px solid var(--fc-line);border-radius:8px;overflow:hidden;font:14px/1.45 var(--sans)}
+.fc-gh{display:flex;align-items:center;gap:14px;background:var(--fc-card);border-bottom:1px solid var(--fc-line);border-top:3px solid var(--fc-brand);padding:0 14px;min-height:48px}
+.fc-dots{display:grid;grid-template-columns:repeat(3,4px);gap:3px;flex:none}
+.fc-dots i{width:4px;height:4px;border-radius:50%;background:var(--fc-muted);display:block}
+.fc-app{font:600 16px var(--sans);flex:none}
+.fc-nav{display:flex;gap:2px;overflow:hidden;white-space:nowrap;min-width:0;align-self:stretch}
+.fc-nav span{display:flex;align-items:center;padding:0 10px;font-size:13.5px;border-bottom:3px solid transparent}
+.fc-nav span.on{font-weight:700;border-bottom-color:var(--fc-brand)}
+.fc-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"head side" "grid side" "list side";grid-template-rows:auto auto 1fr;gap:12px;padding:12px;align-items:start}
+.fc-head{grid-area:head} .fc-gridc{grid-area:grid} .fc-list{grid-area:list} .fc-side{grid-area:side;display:grid;gap:12px;min-width:0}
+.fc-card{background:var(--fc-card);border:1px solid var(--fc-line);border-radius:4px;min-width:0}
+.fc-hd{display:flex;gap:12px;align-items:center;padding:12px 14px;flex-wrap:wrap}
+.fc-ico{flex:none;width:40px;height:40px;border-radius:4px;background:var(--fc-ico);display:flex;align-items:center;justify-content:center}
+.fc-ico svg{width:24px;height:24px;display:block}
+.fc-ttl{min-width:0;flex:1 1 200px}
+.fc-ttl small{display:block;color:var(--fc-muted);font-size:12px;line-height:1.2}
+.fc-ttl b{display:block;font:700 19px/1.25 var(--sans)}
+.fc-hl{display:flex;gap:18px;flex-wrap:wrap}
+.fc-hl div{min-width:0}
+.fc-hl small{display:block;color:var(--fc-muted);font-size:11.5px;line-height:1.2}
+.fc-hl b{display:block;font:700 15px/1.3 var(--sans);font-variant-numeric:tabular-nums}
+.fc-btn{border:1px solid var(--fc-line);background:var(--fc-card);color:var(--fc-brand);padding:5px 14px;border-radius:4px;cursor:pointer;font:600 13px var(--sans)}
+.fc-btn:hover{background:var(--fc-hover)}
+.fc-btn.pri{background:var(--fc-brand);border-color:var(--fc-brand);color:var(--fc-brand-ink)}
+.fc-btn.pri:hover{opacity:.9;background:var(--fc-brand)}
+.fc-alert{display:flex;gap:8px;align-items:flex-start;margin:0 14px 12px;padding:8px 12px;border-radius:4px;font-size:13.5px;background:var(--fc-info-bg);color:var(--fc-info)}
+.fc-alert.warn{background:var(--fc-warn-bg);color:var(--fc-warn)}
+.fc-alert.ok{background:var(--fc-ok-bg);color:var(--fc-ok)}
+.fc-alert b{flex:none;width:18px;height:18px;border-radius:50%;background:currentColor;display:inline-flex;align-items:center;justify-content:center;margin-top:1px}
+.fc-alert b i{font:700 12px/1 var(--sans);font-style:normal;color:var(--fc-card)}
+.fc-sec{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 14px 0}
+.fc-sec h2{font:700 15px var(--sans);margin:0}
+.fc-sec small{color:var(--fc-muted);font-size:12px}
+.fc-seg{display:inline-flex;border:1px solid var(--fc-line);border-radius:4px;overflow:hidden}
+.fc-seg button{border:0;background:var(--fc-card);color:var(--fc-brand);padding:5px 12px;font:600 12.5px var(--sans);cursor:pointer}
+.fc-seg button+button{border-left:1px solid var(--fc-line)}
+.fc-seg button[aria-pressed="true"]{background:var(--fc-brand);color:var(--fc-brand-ink)}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+.fc-gridc th{font:700 11.5px var(--sans);letter-spacing:.03em;text-transform:uppercase;color:var(--fc-muted);text-align:right;padding:7px 10px;background:var(--fc-soft);border-top:1px solid var(--fc-line);border-bottom:1px solid var(--fc-line)}
+.fc-gridc th:first-child{text-align:left;padding-left:14px}
+.fc-gridc td{padding:8px 10px;border-bottom:1px solid var(--fc-line);text-align:right;font:13px var(--mono);font-variant-numeric:tabular-nums;vertical-align:top}
+.fc-gridc td:first-child{text-align:left;font:13.5px var(--sans);padding-left:14px}
+.fc-gridc td small{display:block;color:var(--fc-muted);font:12px var(--sans)}
+.fc-gridc td em{display:block;font:normal 11.5px var(--mono);min-height:1.2em}
+.fc-gridc tr[role="row"]{cursor:pointer}
+.fc-gridc tbody tr:hover{background:var(--fc-hover)}
+.fc-gridc tbody tr[aria-selected="true"]{background:var(--fc-sel);box-shadow:inset 3px 0 0 var(--fc-brand)}
+.fc-gridc tr.tot td,.fc-gridc tr.mgr td{font-weight:700}
+.fc-gridc tr.mgr td:first-child small,.fc-gridc tr.tot td:first-child small{font-weight:400}
+.fc-gridc tr.rep td:first-child{padding-left:28px}
+.fc-up{color:var(--fc-up)} .fc-dn{color:var(--fc-dn)}
+.fc-note{margin:0;padding:8px 14px 12px;color:var(--fc-muted);font-size:12.5px}
+.fc-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 14px 0}
+.fc-q{flex:1 1 200px;max-width:340px;border:1px solid var(--fc-line);border-radius:4px;background:var(--fc-soft);color:var(--fc-ink);padding:6px 10px;font:13px var(--sans);min-width:0}
+.fc-q:focus{outline:2px solid var(--fc-brand);outline-offset:0;background:var(--fc-card)}
+.fc-pill{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--fc-line);background:var(--fc-soft);color:var(--fc-ink);border-radius:99px;padding:2px 4px 2px 10px;font:12.5px var(--sans);cursor:pointer}
+.fc-pill i{font-style:normal;width:16px;height:16px;border-radius:50%;background:var(--fc-line);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1}
+.fc-tabs{display:flex;gap:2px;margin:10px 0 0;padding:0 8px;border-bottom:1px solid var(--fc-line);overflow-x:auto}
+.fc-tab{flex:none;border:0;background:none;color:var(--fc-muted);padding:8px 10px;font:600 13px var(--sans);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.fc-tab:hover{color:var(--fc-ink)}
+.fc-tab[aria-selected="true"]{color:var(--fc-ink);border-bottom-color:var(--fc-brand)}
+.fc-tab span{display:inline-block;margin-left:5px;padding:0 7px;border-radius:99px;background:var(--fc-soft);border:1px solid var(--fc-line);font-size:11.5px;font-variant-numeric:tabular-nums}
+.fc-th,.fc-tr{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) 84px 64px 100px;gap:0 10px;align-items:center;padding:8px 14px}
+.fc-th{background:var(--fc-soft);border-bottom:1px solid var(--fc-line)}
+.fc-th button{border:0;background:none;padding:0;text-align:left;font:700 11.5px var(--sans);letter-spacing:.03em;text-transform:uppercase;color:var(--fc-muted);cursor:pointer}
+.fc-th button:hover{color:var(--fc-ink)}
+.fc-th button.r{text-align:right}
+.fc-tr{border-bottom:1px solid var(--fc-line);cursor:pointer}
+.fc-tr:hover{background:var(--fc-hover)}
+.fc-tr[aria-selected="true"]{background:var(--fc-sel);box-shadow:inset 3px 0 0 var(--fc-brand)}
+.fc-tr .nm{font-weight:600;min-width:0}
+.fc-tr .am{text-align:right;font:13px var(--mono);font-variant-numeric:tabular-nums}
+.fc-tr .ow{color:var(--fc-muted);min-width:0}
+mark{background:var(--fc-mark);color:inherit;border-radius:2px;padding:0 1px}
+.fc-badge{display:inline-block;padding:0 8px;border-radius:99px;font:600 11.5px var(--sans);background:var(--fc-soft);border:1px solid var(--fc-line);color:var(--fc-muted);white-space:nowrap}
+.fc-badge.cm{background:var(--fc-ok-bg);color:var(--fc-ok);border-color:transparent}
+.fc-badge.bc{background:var(--fc-info-bg);color:var(--fc-info);border-color:transparent}
+.fc-badge.dr{background:var(--fc-err-bg);color:var(--fc-err);border-color:transparent}
+.fc-badge.pu{background:var(--fc-ok-bg);color:var(--fc-ok);border-color:transparent}
+.fc-badge.nq{background:var(--fc-warn-bg);color:var(--fc-warn);border-color:transparent}
+.fc-empty{padding:22px 14px;text-align:center;color:var(--fc-muted)}
+.fc-empty button{margin-top:8px}
+.fc-count{padding:8px 14px;color:var(--fc-muted);font-size:12px}
+.fc-pane{padding:12px 14px}
+.fc-pane h2{font:700 15px var(--sans);margin:0 0 8px}
+.fc-pane h3{font:700 12px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--fc-muted);margin:12px 0 6px}
+.fc-pane dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0}
+.fc-pane dt{color:var(--fc-muted);font-size:12.5px}
+.fc-pane dd{margin:0;font-weight:600}
+.fc-pane p{margin:0 0 8px}
+.fc-pane ul{margin:0;padding-left:18px}
+.fc-pane li{margin-bottom:4px}
+.fc-code{margin:0;padding:8px 10px;background:var(--fc-soft);border:1px solid var(--fc-line);border-radius:4px;font:12px/1.5 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.fc-toast{position:absolute;left:50%;bottom:14px;transform:translate(-50%,20px);max-width:min(560px,calc(100% - 24px));background:#032D60;color:#fff;border-radius:4px;padding:10px 16px;font-size:13.5px;box-shadow:0 2px 8px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:3}
+.fc-toast.on{opacity:1;transform:translate(-50%,0)}
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.real h2{font:700 1.3rem var(--serif);margin:0 0 12px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:16px}
+.foot p{margin:0 0 6px}
+@media (max-width:900px){
+  .fc-body{grid-template-columns:minmax(0,1fr);grid-template-areas:"head" "grid" "side" "list";grid-template-rows:auto}
+}
+@media (max-width:640px){
+  .wrap{padding:16px 14px 40px}
+  .fc-nav{display:none}
+  .fc-body{padding:8px;gap:8px}
+  .fc-q{max-width:none;flex-basis:100%}
+  .fc-gridc thead{display:none}
+  .fc-gridc table,.fc-gridc tbody,.fc-gridc tr{display:block}
+  .fc-gridc tr{border-bottom:1px solid var(--fc-line);padding:8px 0}
+  .fc-gridc td{display:inline-block;width:25%;border:0;padding:2px 4px;text-align:left;vertical-align:top}
+  .fc-gridc td:first-child{display:block;width:100%;padding-left:14px}
+  .fc-gridc td:not(:first-child)::before{content:attr(data-l);display:block;font:10px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--fc-muted)}
+  .fc-gridc tr.rep td:first-child{padding-left:26px}
+  .fc-th{display:flex;flex-wrap:wrap;gap:6px 14px}
+  .fc-th button.r{text-align:left}
+  .fc-tr{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm am" "ow st" "ca ca";gap:2px 10px}
+  .fc-tr .nm{grid-area:nm} .fc-tr .am{grid-area:am} .fc-tr .ow{grid-area:ow} .fc-tr .st{grid-area:st;text-align:right} .fc-tr .ca{grid-area:ca}
+}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative model with generic Lightning-style styling, not the real product interface. The reps, managers, quotas and deals are fictional, and no real systems, data or vendor APIs are involved. Forecast categories are assigned by hand in this model.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce Forecasting: roll-up what-if</h1>
+  <p class="dek">Every Monday a sales VP reads Commit, Best Case and Pipeline. Select a rep or a manager in the forecast grid, open a deal, then drop it from the quarter or pull it in, and trace which columns move for the rep, the manager and the total.</p>
+
+  <div class="fc" id="fc">
+    <div class="fc-gh" aria-hidden="true">
+      <span class="fc-dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="fc-app">Sales</span>
+      <span class="fc-nav"><span>Home</span><span>Accounts</span><span>Opportunities</span><span class="on">Forecasts</span><span>Reports</span></span>
+    </div>
+    <div class="fc-body">
+      <section class="fc-card fc-head" aria-label="Forecast summary">
+        <div class="fc-hd">
+          <span class="fc-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18l6-6 4 4 8-9"/><path d="M15 7h6v6"/></svg></span>
+          <div class="fc-ttl"><small>Forecasts</small><b>Q4 forecast, VP view</b></div>
+          <div class="fc-hl" id="hl"></div>
+          <button class="fc-btn" id="reset" type="button">Reset</button>
+        </div>
+        <div class="fc-alert" id="alert" role="status"></div>
+      </section>
+
+      <section class="fc-card fc-gridc" aria-label="Forecast grid">
+        <div class="fc-sec">
+          <h2>Forecast grid</h2>
+          <div class="fc-seg" id="method" role="group" aria-label="Rollup method">
+            <button type="button" data-m="single" aria-pressed="false">Single category</button>
+            <button type="button" data-m="cum" aria-pressed="true">Cumulative</button>
+          </div>
+        </div>
+        <table role="grid" aria-label="Forecast rollup by manager and rep"><thead id="thead"></thead><tbody id="rows"></tbody></table>
+        <p class="fc-note" id="mhelp"></p>
+      </section>
+
+      <aside class="fc-side" aria-label="Opportunity detail">
+        <section class="fc-card fc-pane" id="detail" aria-live="polite"></section>
+        <section class="fc-card fc-pane" id="soql"></section>
+      </aside>
+
+      <section class="fc-card fc-list" aria-label="Opportunity list">
+        <div class="fc-sec"><h2 id="lt">Opportunities</h2><small>Closed won deals sit in the Closed column and are left out of this list.</small></div>
+        <div class="fc-tools">
+          <input class="fc-q" id="q" type="search" placeholder="Search opportunities, owners or categories" aria-label="Search opportunities">
+          <span id="scopepill"></span>
+        </div>
+        <div class="fc-tabs" id="tabs" role="tablist" aria-label="Opportunity filters"></div>
+        <div role="grid" aria-label="Opportunities" id="olist">
+          <div class="fc-th" role="row" id="oth"></div>
+          <div id="orows"></div>
+        </div>
+        <div class="fc-count" id="ocount" aria-live="polite"></div>
+      </section>
+    </div>
+    <div class="fc-toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real"><h2 id="t-real">In a real environment</h2>
+    <div class="rgrid">
+      <div><b>Data sources</b><ul>
+        <li>Opportunity Amount, Close Date and Forecast Category. Stages map to a forecast category, and owners can override it on their own deals.</li>
+        <li>The forecast hierarchy, built from the user role hierarchy, or from the territory hierarchy if territory forecasts are enabled.</li>
+        <li>Quotas, defined in Setup or loaded from an external source. The ForecastingQuota object exposes them to the API.</li>
+        <li>ForecastingItem, a read-only object with rolled-up forecast amounts, and ForecastingAdjustment for manager adjustments.</li>
+      </ul></div>
+      <div><b>Limits and prerequisites</b><ul>
+        <li>Collaborative Forecasts turned on, forecast types activated and users given access. Check the editions listed on the help page.</li>
+        <li>A decision on the rollup method. The help pages disagree on which one is the default, so confirm in the target org. Switching methods deletes adjustments for active forecast types.</li>
+        <li>Adjustments change forecast amounts only, not the underlying opportunities, and they do not update on their own when a deal changes category.</li>
+        <li>A user can open forecasts for people below them in the hierarchy, not above. Confirm access rules per role in the target org.</li>
+      </ul></div>
+      <div><b>How it would be validated</b><ul>
+        <li>Reconcile each grid total with an Opportunity report or a SOQL aggregate grouped by owner and Forecast Category for the same period.</li>
+        <li>Compare ForecastingItem amounts with the sum of the same opportunities, per forecast type and owner.</li>
+        <li>Test with one sandbox user per hierarchy level to confirm who sees which rows.</li>
+        <li>Capture a forecast submission each Monday and compare week over week, so changes are traceable.</li>
+      </ul></div>
+    </div>
+    <p class="rnote">Standard Salesforce behavior on this screen: a forecast grid with a rollup per owner and manager, a choice of single category or cumulative columns, and an opportunity list for the selected forecast value. Illustrative parts: the scenario actions that drop or pull in a deal, the trace panel, the highlights strip and the SOQL text, which is a sketch to adapt and test in a sandbox. In a real org, dropping a deal means editing its Close Date or Stage, and the forecasts page offers quick actions to edit opportunities.</p>
+    <p class="rnote">What this demo does not claim: it applies no probability weights, predicts no close dates and measures no forecast accuracy. It leaves out manager adjustments and judgments, territory forecasts, multiple currencies and opportunity splits. Every figure here is a plain sum of fictional deal amounts.</p>
+    <p class="rnote">References: <a href="https://help.salesforce.com/s/articleView?id=sales.forecasts3_cumulative_columns_overview.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">Rollup methods for pipeline forecasts</a>, <a href="https://help.salesforce.com/s/articleView?id=sales.forecasts3_enable_cumulative_columns.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">Select a rollup method</a>, <a href="https://help.salesforce.com/s/articleView?id=sales.forecasts3_opportunity_detail.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">Opportunity details in pipeline forecasts</a>, <a href="https://help.salesforce.com/s/articleView?id=sales.forecasts3_hierarchy_overview.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">View other users' forecasts</a>, <a href="https://help.salesforce.com/s/articleView?id=sales.faq_forecasts_category_mapping.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">Stage to forecast category mappings</a>, <a href="https://help.salesforce.com/s/articleView?id=sales.forecasts3_adjusting_forecasts.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">Make adjustments to pipeline forecasts</a>, <a href="https://help.salesforce.com/s/articleView?id=sales.forecasts3_quotes_intro.htm&amp;language=en_US&amp;type=5" target="_blank" rel="noopener">Set up forecast quotas</a>, <a href="https://developer.salesforce.com/docs/platform/salesforce-soql-sosl/guide/sforce-api-calls-soql-select-dateformats.html" target="_blank" rel="noopener">SOQL date literals</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql_select_agg_functions.htm" target="_blank" rel="noopener">SOQL aggregate functions</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_forecastingitem.htm" target="_blank" rel="noopener">ForecastingItem</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_forecastingquota.htm" target="_blank" rel="noopener">ForecastingQuota</a>, <a href="https://developer.salesforce.com/docs/atlas.en-us.object_reference.meta/object_reference/sforce_api_objects_forecastingadjustment.htm" target="_blank" rel="noopener">ForecastingAdjustment</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <div class="foot">
+    <p>Salesforce and other product names are trademarks of their respective owners. This page is not affiliated with or endorsed by any vendor.</p>
+    <p><a href="/portfolio/" class="back">Back to portfolio</a></p>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const REPS={
+  ml:{n:'Marcus Lee',m:'east',quota:900,closed:310},
+  so:{n:'Sofia Ortega',m:'east',quota:800,closed:240},
+  hk:{n:'Hana Kimura',m:'west',quota:850,closed:380},
+  eb:{n:'Elliot Brandt',m:'west',quota:700,closed:150}
+};
+const MGRS={east:{n:'Dana Whitfield',t:'East team',reps:['ml','so']},west:{n:'Tomas Reyes',t:'West team',reps:['hk','eb']}};
+const DEALS=[
+  {id:'d1',n:'Harbor Logistics expansion',r:'ml',c:'Commit',a:220,q:0},
+  {id:'d2',n:'Pinecrest Health renewal',r:'ml',c:'Commit',a:180,q:0},
+  {id:'d3',n:'Alder Retail new logo',r:'ml',c:'Best Case',a:260,q:0},
+  {id:'d4',n:'Birchwood Media',r:'ml',c:'Pipeline',a:150,q:0},
+  {id:'d5',n:'Granite Energy platform',r:'so',c:'Commit',a:300,q:0},
+  {id:'d6',n:'Lumen Foods',r:'so',c:'Best Case',a:140,q:0},
+  {id:'d7',n:'Orchid Schools',r:'so',c:'Pipeline',a:210,q:0},
+  {id:'d8',n:'Summit Freight',r:'hk',c:'Commit',a:190,q:0},
+  {id:'d9',n:'Tidewater Bank',r:'hk',c:'Commit',a:230,q:0},
+  {id:'d10',n:'Cobalt Insurance',r:'hk',c:'Best Case',a:270,q:0},
+  {id:'d11',n:'Willow Telecom',r:'hk',c:'Pipeline',a:120,q:0},
+  {id:'d12',n:'Redwood Utilities',r:'eb',c:'Commit',a:250,q:0},
+  {id:'d13',n:'Saffron Hotels',r:'eb',c:'Best Case',a:160,q:0},
+  {id:'d14',n:'Meridian Labs',r:'eb',c:'Pipeline',a:300,q:0},
+  {id:'n1',n:'Ironbridge Steel',r:'ml',c:'Best Case',a:200,q:1},
+  {id:'n2',n:'Fjord Marine',r:'so',c:'Best Case',a:160,q:1},
+  {id:'n3',n:'Kestrel Air',r:'hk',c:'Best Case',a:180,q:1},
+  {id:'n4',n:'Opal Pharma',r:'eb',c:'Pipeline',a:220,q:1}
+];
+const RANK={'Commit':0,'Best Case':1,'Pipeline':2};
+const TABS=[['all','All'],['Commit','Commit'],['Best Case','Best Case'],['Pipeline','Pipeline'],['changed','Changed']];
+const GRID_ROWS=[['vp',0],['east',0],['ml',1],['so',1],['west',0],['hk',1],['eb',1]];
+const fresh=()=>({q:'',tab:'all',sort:{k:null,dir:null},scope:'vp',sel:null,method:'cum',flip:new Set()});
+let S=fresh(),kbd=null,toastT=null;
+
+const money=k=>{const a=Math.abs(k);return a>=1000?'$'+(a/1000).toFixed(2)+'M':'$'+Math.round(a)+'k'};
+const sm=k=>k===0?'0':(k>0?'+':'-')+money(k);
+const pct=(a,b)=>b?Math.round(a/b*100)+'%':'0%';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hl(s,q){
+  if(!q)return esc(s);
+  const lo=s.toLowerCase(),ql=q.toLowerCase();let out='',i=0,j;
+  while((j=lo.indexOf(ql,i))>=0){out+=esc(s.slice(i,j))+'<mark>'+esc(s.slice(j,j+q.length))+'</mark>';i=j+q.length}
+  return out+esc(s.slice(i));
+}
+const repsOf=sc=>sc==='vp'?Object.keys(REPS):MGRS[sc]?MGRS[sc].reps:[sc];
+const scopeName=sc=>sc==='vp'?'VP total':MGRS[sc]?MGRS[sc].t:REPS[sc].n;
+const teamOf=r=>MGRS[REPS[r].m].t;
+const status=d=>d.q===0?(S.flip.has(d.id)?'Dropped':'Counted'):(S.flip.has(d.id)?'Pulled in':'Next quarter');
+function agg(fl){
+  const keep=d=>d.q===0?!fl.has(d.id):fl.has(d.id);
+  const x={},z=()=>({C:0,Cm:0,B:0,P:0,Q:0});
+  Object.keys(REPS).forEach(r=>{x[r]=z();x[r].C=REPS[r].closed;x[r].Q=REPS[r].quota});
+  DEALS.filter(keep).forEach(d=>{const t=d.c==='Commit'?'Cm':d.c==='Best Case'?'B':'P';x[d.r][t]+=d.a});
+  x.vp=z();
+  Object.keys(MGRS).forEach(m=>{x[m]=z();MGRS[m].reps.forEach(r=>['C','Cm','B','P','Q'].forEach(k=>{x[m][k]+=x[r][k]}));['C','Cm','B','P','Q'].forEach(k=>{x.vp[k]+=x[m][k]})});
+  return x;
+}
+const cols=x=>S.method==='cum'?[x.C,x.C+x.Cm,x.C+x.Cm+x.B,x.Cm+x.B+x.P]:[x.C,x.Cm,x.B,x.P];
+const NAMES={cum:['Closed only','Commit forecast','Best Case forecast','Open pipeline'],single:['Closed','Commit','Best Case','Pipeline']};
+const SHORT={cum:['Closed','Commit fc','Best fc','Open pipe'],single:['Closed','Commit','Best Case','Pipeline']};
+const dcell=(v,b)=>{const d=v-b;return '<em class="'+(d>0?'fc-up':d<0?'fc-dn':'')+'">'+(d===0?'':sm(d))+'</em>'};
+const att=x=>'Quota '+money(x.Q)+', Commit and Closed '+pct(x.C+x.Cm,x.Q);
+
+function renderGrid(cur,base){
+  const nm=NAMES[S.method],sh=SHORT[S.method];
+  $('thead').innerHTML='<tr role="row"><th scope="col">Owner</th>'+nm.map(n=>'<th scope="col">'+n+'</th>').join('')+'</tr>';
+  $('mhelp').textContent=S.method==='cum'
+    ?'Cumulative: Commit forecast adds Commit and Closed. Best Case forecast adds Best Case, Commit and Closed. Open pipeline adds Pipeline, Best Case and Commit. The rollup method is an admin setting in a real org.'
+    :'Single category: each column holds only the opportunities in that one category, so you add the columns yourself. The rollup method is an admin setting in a real org.';
+  $('rows').innerHTML=GRID_ROWS.map(([id,lv])=>{
+    const cls=id==='vp'?'tot':MGRS[id]?'mgr':'rep';
+    const label=id==='vp'?'VP total':MGRS[id]?MGRS[id].t+', '+MGRS[id].n:REPS[id].n;
+    const c=cols(cur[id]),b=cols(base[id]);
+    return '<tr role="row" class="'+cls+'" tabindex="0" data-g="'+id+'" aria-selected="'+(S.scope===id)+'"><td>'+esc(label)+'<small>'+att(cur[id])+'</small></td>'+
+      c.map((v,i)=>'<td data-l="'+sh[i]+'">'+money(v)+dcell(v,b[i])+'</td>').join('')+'</tr>';
+  }).join('');
+}
+function renderHead(cur,base){
+  const t=cur[S.scope],n=S.flip.size;
+  $('hl').innerHTML='<div><small>Selected</small><b>'+esc(scopeName(S.scope))+'</b></div><div><small>Quota</small><b>'+money(t.Q)+'</b></div><div><small>Commit and Closed vs quota</small><b>'+pct(t.C+t.Cm,t.Q)+'</b></div><div><small>Changes</small><b>'+n+'</b></div>';
+  const dC=(cur.vp.C+cur.vp.Cm)-(base.vp.C+base.vp.Cm);
+  const al=$('alert');
+  if(n===0){al.className='fc-alert';al.innerHTML='<b><i>i</i></b><span>Baseline forecast. Select a row in the grid to list its opportunities, then select an opportunity to drop it or pull it in.</span>';return}
+  let big='',bv=0;
+  Object.keys(MGRS).forEach(m=>{const d=(cur[m].C+cur[m].Cm)-(base[m].C+base[m].Cm);if(Math.abs(d)>Math.abs(bv)){bv=d;big=MGRS[m].t}});
+  if(dC<0){al.className='fc-alert warn';al.innerHTML='<b><i>!</i></b><span>Commit forecast is down '+money(dC)+' ('+pct(Math.abs(dC),base.vp.C+base.vp.Cm)+') against baseline. '+big+' takes the largest swing at '+sm(bv)+'.</span>'}
+  else if(dC>0){al.className='fc-alert ok';al.innerHTML='<b><i>+</i></b><span>Commit forecast is up '+money(dC)+' against baseline. '+big+' takes the largest swing at '+sm(bv)+'.</span>'}
+  else{al.className='fc-alert';al.innerHTML='<b><i>i</i></b><span>Commit forecast is unchanged. These '+n+(n===1?' change only moves':' changes only move')+' Best Case or Pipeline columns, so the number the VP watches most does not show them.</span>'}
+}
+function inScope(){const rs=repsOf(S.scope);return DEALS.filter(d=>rs.includes(d.r))}
+function matches(d){
+  if(!S.q)return true;const q=S.q.toLowerCase();
+  return d.n.toLowerCase().includes(q)||REPS[d.r].n.toLowerCase().includes(q)||d.c.toLowerCase().includes(q)||status(d).toLowerCase().includes(q);
+}
+function tabOK(d,t){return t==='all'||(t==='changed'?S.flip.has(d.id):d.c===t)}
+function sortVal(d,k){return k==='n'?d.n.toLowerCase():k==='o'?REPS[d.r].n.toLowerCase():k==='c'?RANK[d.c]:k==='a'?d.a:status(d)}
+const HEADS=[['n','Opportunity',''],['o','Owner',''],['c','Category',''],['a','Amount','r'],['s','Status','']];
+function renderList(){
+  const sc=inScope();
+  $('lt').textContent='Opportunities, '+scopeName(S.scope);
+  $('scopepill').innerHTML=S.scope==='vp'?'':'<button type="button" class="fc-pill" id="clrscope" aria-label="Clear owner filter, back to VP total">Owner: '+esc(scopeName(S.scope))+' <i aria-hidden="true">x</i></button>';
+  $('tabs').innerHTML=TABS.map(([k,l])=>'<button type="button" role="tab" class="fc-tab" data-t="'+k+'" aria-selected="'+(S.tab===k)+'">'+l+'<span>'+sc.filter(d=>tabOK(d,k)).length+'</span></button>').join('');
+  $('oth').innerHTML=HEADS.map(([k,l,c])=>{
+    const on=S.sort.k===k,dir=on?S.sort.dir:null;
+    return '<button type="button" role="columnheader" class="'+c+'" data-s="'+k+'" aria-sort="'+(dir==='asc'?'ascending':dir==='desc'?'descending':'none')+'" aria-label="Sort by '+l+(dir?', currently '+(dir==='asc'?'ascending':'descending'):', not sorted')+'">'+l+(dir==='asc'?' ▲':dir==='desc'?' ▼':'')+'</button>';
+  }).join('');
+  let rows=sc.filter(d=>tabOK(d,S.tab)&&matches(d));
+  if(S.sort.k){const k=S.sort.k,m=S.sort.dir==='asc'?1:-1;rows=rows.map((d,i)=>[d,i]).sort((a,b)=>{const x=sortVal(a[0],k),y=sortVal(b[0],k);return x<y?-m:x>y?m:a[1]-b[1]}).map(p=>p[0])}
+  if(!rows.length){
+    $('orows').innerHTML='<div class="fc-empty">No opportunities match'+(S.q?' "'+esc(S.q)+'"':'')+' in this view.<br><button type="button" class="fc-btn" id="clrq">Clear search and tab</button></div>';
+  }else{
+    const bc={'Counted':'','Dropped':' dr','Pulled in':' pu','Next quarter':' nq'};
+    $('orows').innerHTML=rows.map(d=>{
+      const st=status(d),cat=d.c==='Commit'?' cm':d.c==='Best Case'?' bc':'';
+      return '<div class="fc-tr" role="row" tabindex="0" data-d="'+d.id+'" aria-selected="'+(S.sel===d.id)+'">'+
+        '<span class="nm" role="gridcell">'+hl(d.n,S.q)+'</span><span class="ow" role="gridcell">'+hl(REPS[d.r].n,S.q)+'</span>'+
+        '<span class="ca" role="gridcell"><span class="fc-badge'+cat+'">'+hl(d.c,S.q)+'</span></span><span class="am" role="gridcell">$'+d.a+'k</span>'+
+        '<span class="st" role="gridcell"><span class="fc-badge'+bc[st]+'">'+hl(st,S.q)+'</span></span></div>';
+    }).join('');
+  }
+  $('ocount').textContent=rows.length+(rows.length===1?' item':' items')+(S.sort.k?', sorted by '+HEADS.find(h=>h[0]===S.sort.k)[1].toLowerCase()+' '+(S.sort.dir==='asc'?'ascending':'descending'):'')+(S.q?', filtered by "'+S.q+'"':'');
+}
+function affected(d){
+  const cum=S.method==='cum',n=NAMES[S.method];
+  if(d.c==='Commit')return cum?[n[1],n[2],n[3]]:[n[1]];
+  if(d.c==='Best Case')return cum?[n[2],n[3]]:[n[2]];
+  return [n[3]];
+}
+function renderDetail(){
+  const el=$('detail'),d=DEALS.find(x=>x.id===S.sel);
+  if(!d){el.innerHTML='<h2>Opportunity detail</h2><p>Select an opportunity in the list to see its fields and why the forecast moves.</p>';return}
+  const st=status(d),flipped=S.flip.has(d.id),own=REPS[d.r].n,team=teamOf(d.r);
+  const label=d.q===0?(flipped?'Restore to this quarter':'Drop from this quarter'):(flipped?'Undo pull-in':'Pull into this quarter');
+  let line;
+  if(d.q===0)line=flipped?'Dropped. It is out of every total. Restoring it adds '+money(d.a)+' back as '+d.c+'.':'Counted today as '+d.c+'. Dropping it removes '+money(d.a)+' from every row it rolls up through.';
+  else line=flipped?'Pulled in. It now counts this quarter as '+d.c+'. Undoing it removes '+money(d.a)+' again.':'Not counted this quarter. Pulling it in adds '+money(d.a)+' as '+d.c+', keeping its category.';
+  el.innerHTML='<h2>'+esc(d.n)+'</h2><dl><dt>Owner</dt><dd>'+esc(own)+'</dd><dt>Amount</dt><dd>$'+d.a+'k</dd><dt>Forecast category</dt><dd>'+d.c+'</dd><dt>Close date</dt><dd>'+(d.q===0?'This quarter':'Next quarter')+'</dd><dt>In forecast</dt><dd>'+st+'</dd></dl>'+
+    '<p style="margin-top:10px"><button type="button" class="fc-btn pri" id="act">'+label+'</button></p>'+
+    '<h3>Why the forecast moves</h3><p>'+line+'</p><ul><li>Rolls up through '+esc(own)+', '+esc(team)+' and the VP total.</li><li>Columns that change under the '+(S.method==='cum'?'cumulative':'single category')+' rollup: '+affected(d).join(', ')+'.</li><li>'+NAMES[S.method][0]+' never changes, because closed won deals are not in play.</li></ul>'+
+    '<p style="margin-top:8px;color:var(--fc-muted);font-size:12.5px">In a real org this is an edit to Close Date or Stage, made with a quick action on the forecasts page.</p>';
+}
+function renderSoql(){
+  const sc=S.scope;let where;
+  if(sc==='vp')where='';
+  else if(MGRS[sc])where="\nAND Owner.UserRole.Name = '"+MGRS[sc].t+"'";
+  else where="\nAND Owner.Name = '"+REPS[sc].n+"'";
+  $('soql').innerHTML='<h2>Reconcile with SOQL</h2><p style="color:var(--fc-muted);font-size:12.5px">Illustrative query for the selected row. Adapt the owner filter to your role hierarchy and test it in a sandbox.</p><pre class="fc-code">SELECT ForecastCategoryName, SUM(Amount)\nFROM Opportunity\nWHERE CloseDate = THIS_FISCAL_QUARTER'+esc(where)+'\nGROUP BY ForecastCategoryName</pre>';
+}
+function render(){
+  const cur=agg(S.flip),base=agg(new Set());
+  renderHead(cur,base);renderGrid(cur,base);renderList();renderDetail();renderSoql();
+  document.querySelectorAll('#method button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===S.method));
+  if(kbd){const e=kbd.g?document.querySelector('[data-g="'+kbd.g+'"]'):document.querySelector('[data-d="'+kbd.d+'"]');if(e)e.focus();kbd=null}
+}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),3800)}
+function selectDeal(id,fromKey){S.sel=S.sel===id&&!fromKey?null:id;if(fromKey)kbd={d:id};render()}
+function toggle(id){
+  const d=DEALS.find(x=>x.id===id),before=agg(S.flip);
+  S.flip.has(id)?S.flip.delete(id):S.flip.add(id);
+  const after=agg(S.flip),dC=(after.vp.C+after.vp.Cm)-(before.vp.C+before.vp.Cm);
+  const verb=d.q===0?(S.flip.has(id)?'dropped from':'restored to'):(S.flip.has(id)?'pulled into':'removed from');
+  kbd={d:id};render();
+  toast(d.n+' '+verb+' this quarter. '+(dC===0?'Commit forecast is unchanged.':'Commit forecast '+sm(dC)+'.'));
+}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button,[data-g],[data-d]');if(!t)return;
+  if(t.id==='reset'){S=fresh();$('q').value='';$('toast').classList.remove('on');render();return}
+  if(t.id==='act'){toggle(S.sel);return}
+  if(t.id==='clrscope'){S.scope='vp';render();return}
+  if(t.id==='clrq'){S.q='';S.tab='all';$('q').value='';render();return}
+  if(t.dataset.m){S.method=t.dataset.m;render();return}
+  if(t.dataset.t){S.tab=t.dataset.t;render();return}
+  if(t.dataset.s){
+    const k=t.dataset.s;
+    if(S.sort.k!==k)S.sort={k:k,dir:'asc'};else if(S.sort.dir==='asc')S.sort={k:k,dir:'desc'};else S.sort={k:null,dir:null};
+    render();return;
+  }
+  if(t.dataset.g){S.scope=t.dataset.g;S.sel=null;render();return}
+  if(t.dataset.d){selectDeal(t.dataset.d,false);return}
+});
+document.addEventListener('keydown',e=>{
+  const row=e.target.closest&&e.target.closest('[data-g],[data-d]');if(!row||e.target.tagName==='INPUT')return;
+  const sel=row.dataset.g?'[data-g]':'[data-d]';
+  if(e.key==='Enter'||e.key===' '){
+    e.preventDefault();
+    if(row.dataset.g){S.scope=row.dataset.g;S.sel=null;kbd={g:row.dataset.g};render()}
+    else selectDeal(row.dataset.d,true);
+  }else if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+    e.preventDefault();const all=[...document.querySelectorAll(sel)],i=all.indexOf(row),n=all[i+(e.key==='ArrowDown'?1:-1)];if(n)n.focus();
+  }
+});
+$('q').addEventListener('input',e=>{S.q=e.target.value.trim();renderList()});
+render();
+</script>
+</body>
+</html>

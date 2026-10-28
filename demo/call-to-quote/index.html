@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gong to Salesforce CPQ: Call-to-Quote Validator | Andres Videla</title>
+<meta name="author" content="Andres Videla">
+<meta property="og:url" content="https://andres-videla.com/demo/call-to-quote/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<link rel="canonical" href="https://andres-videla.com/demo/call-to-quote/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Gong to Salesforce CPQ: Call-to-Quote Validator">
+<meta property="og:description" content="An interactive architecture demo with fictional data: call transcript to CPQ quote line, validated by deterministic pricing policy.">
+<meta property="og:image" content="https://andres-videla.com/assets/call-to-quote-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="An interactive architecture demo: extracting commercial terms from a call transcript, mapping them to CPQ quote lines and validating them against deterministic pricing policy.">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --h-seats:#cfe3ff; --h-disc:#ffd9c7; --h-term:#dcd3ff; --h-bill:#cdeedd; --h-pay:#fbe8a6; --h-plan:#e6d4f2; --h-ramp:#ffc9d6;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+    --h-seats:#1d3a66; --h-disc:#5a2e1c; --h-term:#33285e; --h-bill:#164430; --h-pay:#524210; --h-plan:#46285a; --h-ramp:#5e1f33;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  --h-seats:#1d3a66; --h-disc:#5a2e1c; --h-term:#33285e; --h-bill:#164430; --h-pay:#524210; --h-plan:#46285a; --h-ramp:#5e1f33;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+.lede{color:var(--muted);max-width:760px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.grid{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{min-width:0}
+#quote{overflow-x:auto}
+html,body{overflow-x:hidden}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+button{font:inherit;cursor:pointer}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chip:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+textarea{width:100%;min-height:190px;resize:vertical;font:14px/1.55 var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+.evidence{font:14px/1.9 var(--mono);white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:10px}
+mark{color:inherit;border-radius:3px;padding:1px 2px}
+mark.seats{background:var(--h-seats)} mark.disc{background:var(--h-disc)} mark.term{background:var(--h-term)}
+mark.bill{background:var(--h-bill)} mark.pay{background:var(--h-pay)} mark.plan{background:var(--h-plan)} mark.ramp{background:var(--h-ramp)}
+mark.tent{background:transparent;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:560px){.steps{grid-template-columns:repeat(2,1fr)}}
+.step{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.step b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.step span{font-size:15px;font-weight:600}
+.status{display:flex;align-items:center;gap:10px;border-radius:10px;padding:12px 14px;font-weight:600}
+.status small{display:block;font-weight:400;font-size:13px;opacity:.9}
+.status.ok{background:var(--ok-soft);color:var(--ok)} .status.warn{background:var(--warn-soft);color:var(--warn)} .status.bad{background:var(--bad-soft);color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin-top:12px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+ul.findings{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+ul.findings li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 6px;margin-right:6px}
+.tag.block{background:var(--bad-soft);color:var(--bad)} .tag.review{background:var(--warn-soft);color:var(--warn)} .tag.info{background:var(--accent-soft);color:var(--accent)}
+.rule{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:6px}
+.policy{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+@media (max-width:560px){.policy{grid-template-columns:1fr}}
+.policy label{font-size:13px;color:var(--muted);display:block}
+.policy output{color:var(--ink);font-weight:600;float:right}
+input[type=range]{width:100%;accent-color:var(--accent)}
+pre{margin:0;font:12px/1.5 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;max-height:320px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.principles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:860px){.principles{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.principles{grid-template-columns:1fr}}
+.principles div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.principles b{display:block;margin-bottom:4px}
+.principles p{margin:0;color:var(--muted)}
+details.payload>summary{cursor:pointer;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+footer{margin-top:28px;font-size:13px;color:var(--muted)}
+.real{margin-top:24px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+.mwrap{overflow-x:auto;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.mtab{width:100%;min-width:560px;border-collapse:collapse;font-size:14px}
+.mtab th,.mtab td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.mtab tr:last-child td{border-bottom:0}
+.mtab th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Gong to Salesforce CPQ: Call-to-Quote Validator</h1>
+  <p class="lede">A call transcript is an unreliable source of commercial terms. This demo shows an architecture that treats it as one: probabilistic extraction on one side, deterministic pricing policy on the other, and a draft quote that never commits without a clean validation.</p>
+  <div class="notice">Synthetic transcripts and illustrative pricing. All scenarios are composite and invented for this demo. The extraction step here is a rule-based parser that stands in for an LLM or a conversation intelligence API, so the focus stays on the boundary between extraction and validation.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-in">
+        <h2 id="t-in">1. Call transcript</h2>
+        <div class="chips" role="group" aria-label="Scenario">
+          <button class="chip" data-s="clean" aria-pressed="true">Clean handoff</button>
+          <button class="chip" data-s="creep" aria-pressed="false">Discount creep</button>
+          <button class="chip" data-s="ramp" aria-pressed="false">Ambiguous scope</button>
+        </div>
+        <textarea id="tx" aria-label="Call transcript, editable" spellcheck="false"></textarea>
+        <div class="evidence" id="ev" aria-label="Extracted evidence"></div>
+        <div class="legend">
+          <span style="--c:var(--h-seats)">Seats</span><span style="--c:var(--h-plan)">Plan</span><span style="--c:var(--h-disc)">Discount</span>
+          <span style="--c:var(--h-term)">Term</span><span style="--c:var(--h-bill)">Billing</span><span style="--c:var(--h-pay)">Payment terms</span><span style="--c:var(--h-ramp)">Ramp</span>
+          <span style="--c:transparent;text-decoration:underline wavy">Tentative language</span>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="t-pol">
+        <h2 id="t-pol">Pricing policy (editable)</h2>
+        <div class="policy">
+          <div><label for="p-appr">Discount needing approval above <output id="o-appr"></output></label><input type="range" id="p-appr" min="0" max="40" step="1" value="20"></div>
+          <div><label for="p-ceil">Hard discount ceiling <output id="o-ceil"></output></label><input type="range" id="p-ceil" min="20" max="60" step="1" value="40"></div>
+          <div><label for="p-term">Minimum term when discount exceeds 10% <output id="o-term"></output></label><input type="range" id="p-term" min="1" max="36" step="1" value="12"></div>
+          <div><label for="p-net">Maximum payment terms <output id="o-net"></output></label><input type="range" id="p-net" min="15" max="90" step="15" value="45"></div>
+        </div>
+        <p style="margin:12px 0 0;font-size:14px"><label><input type="checkbox" id="p-ramp"> Allow ramp deals in a single quote</label></p>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-out">
+        <h2 id="t-out">2. Pipeline result</h2>
+        <div class="steps" id="steps"></div>
+        <div id="status" style="margin-top:12px"></div>
+      </section>
+
+      <section class="card" aria-labelledby="t-q">
+        <h2 id="t-q">3. Draft quote (never committed)</h2>
+        <div id="quote"></div>
+      </section>
+
+      <section class="card" aria-labelledby="t-f">
+        <h2 id="t-f">4. Validation findings</h2>
+        <ul class="findings" id="findings"></ul>
+      </section>
+    </div>
+  </div>
+
+  <details class="card payload" style="margin-top:16px">
+    <summary>Structured payload handed to the CPQ layer (JSON)</summary>
+    <div class="row" style="margin-top:12px"><span style="font-size:13px;color:var(--muted)">The contract between extraction and the CPQ layer.</span><button class="btn" id="copy">Copy JSON</button></div>
+    <pre id="json"></pre>
+  </details>
+
+  <section style="margin-top:24px" aria-labelledby="t-d">
+    <h2 id="t-d">Design principles</h2>
+    <div class="principles">
+      <div><b>Extraction is advisory</b><p>Every extracted field carries its evidence span and a confidence level. Nothing is trusted because a model said it.</p></div>
+      <div><b>Policy is deterministic</b><p>Discount limits, term floors and payment rules live in code, versioned and testable, not in a prompt.</p></div>
+      <div><b>Conflicts stop the line</b><p>Two different values for one field are a finding, not a coin flip. The system routes to a human with both quotes of evidence.</p></div>
+      <div><b>The quote stays a draft</b><p>The output is a payload for a quote draft. Approval and commit remain with Deal Desk and the CPQ approval chain.</p></div>
+    </div>
+  </section>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid"><div><b>Data sources</b><ul><li>Call transcripts can be requested from Gong by call IDs or by date range.</li><li>Field types and picklist values used for validation come from Salesforce describe, filtering out inactive values.</li><li>Discount and pricing policy comes from the organization's own price book and approval rules, so it is configured per client.</li></ul></div><div><b>Limits and prerequisites</b><ul><li>Gong API credentials are issued by a technical administrator.</li><li>Gong documents default limits of 3 calls per second and 10,000 calls per day for the company.</li><li>Salesforce API requests are pooled per org within a 24-hour period. For Enterprise Edition the allowance is 100,000 plus a per-license amount and any purchased add-ons, and exceeding it returns HTTP 403 REQUEST_LIMIT_EXCEEDED.</li><li>Linking a call to the right Opportunity must be confirmed in the target org. Gong lists a beta endpoint for manual CRM associations on calls.</li></ul></div><div><b>How it would be validated</b><ul><li>Label a sample of real calls with the quote terms a person would extract.</li><li>Measure missed and wrong terms before any draft quote is created automatically.</li><li>Keep the output as a draft that a person approves.</li></ul></div></div>
+    <p class="rnote">What this demo does not claim: the extraction here is a rule-based parser. A real version would use a language model and has to be evaluated on the organization's own calls.</p>
+    <p class="rnote">References: <a href="https://help.gong.io/docs/receive-access-to-the-api.md" target="_blank" rel="noopener">Gong API access</a> &middot; <a href="https://help.gong.io/apidocs/introduction-2.md" target="_blank" rel="noopener">Gong API introduction</a> &middot; <a href="https://developer.salesforce.com/docs/platform/salesforce-app-limits-cheatsheet/guide/salesforce-app-limits-platform-api.html" target="_blank" rel="noopener">Salesforce API request limits</a> &middot; <a href="https://developer.salesforce.com/docs/atlas.en-us.api.meta/api/sforce_api_calls_describesobject.htm" target="_blank" rel="noopener">Salesforce describeSObject</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Conversation intelligence platforms such as Gong are one possible source of the transcript. This page is an independent architecture illustration and is not affiliated with or endorsed by any vendor.</footer>
+</div>
+
+<script>
+(function(){
+  var SCEN = {
+    clean: "Rep: To confirm, 120 seats on the Growth plan, annual billing, 12-month term.\nBuyer: Yes, that matches what we agreed.\nRep: I can offer 10% off for signing this quarter.\nBuyer: That works. Payment terms of net 30 are fine for us.",
+    creep: "Buyer: We need 250 users, and we were thinking 35% off given the competitor quote.\nRep: Let me check. I think we can probably do 30% off on a 2 year term.\nBuyer: Okay. We would like quarterly billing, and payment terms of net 60.",
+    ramp: "Buyer: We start with 50 seats and ramp to 150 seats by month six.\nRep: Sure, a 6-month pilot at 15% off, then we convert to the annual plan.\nBuyer: Monthly billing for the pilot please. Net 30 is fine."
+  };
+  var PRICE = {Starter:20, Growth:40, Enterprise:75};
+  var fmt = new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:0});
+  var $ = function(id){return document.getElementById(id)};
+
+  function collect(re, text, map){
+    var out=[], m; re.lastIndex=0;
+    while((m=re.exec(text))){
+      var o = map ? map(m) : {};
+      o.start=m.index; o.end=m.index+m[0].length; o.raw=m[0]; out.push(o);
+      if(m[0].length===0) re.lastIndex++;
+    }
+    return out;
+  }
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function distinct(a){var r=[]; a.forEach(function(x){if(r.indexOf(x.value)<0) r.push(x.value)}); return r}
+  function last(a){return a.length? a[a.length-1].value : null}
+
+  function extract(t){
+    var f = {};
+    f.seats = collect(/(\d{1,5})\s*(?:seats|users|licenses|licences)\b/gi, t, function(m){return {value:+m[1]}});
+    f.disc  = collect(/(\d{1,2}(?:\.\d+)?)\s*(?:%|percent)/gi, t, function(m){return {value:+m[1]}});
+    f.term  = collect(/(\d{1,2})[-\s]*(months?|years?)\b/gi, t, function(m){return {value:(+m[1])*(/^y/i.test(m[2])?12:1)}});
+    f.bill  = collect(/\b(annual|annually|quarterly|monthly)\s+(?:billing|invoicing|payments?)\b|\bbilled\s+(annually|quarterly|monthly)\b/gi, t, function(m){var v=(m[1]||m[2]).toLowerCase(); return {value: v==="annually"?"annual":v}});
+    f.pay   = collect(/\bnet\s*(\d{2,3})\b/gi, t, function(m){return {value:+m[1]}});
+    f.plan  = collect(/\b(starter|growth|enterprise)\b(?:\s+plan)?/gi, t, function(m){var v=m[1].toLowerCase(); return {value:v.charAt(0).toUpperCase()+v.slice(1)}});
+    f.ramp  = collect(/\bramp(?:ed|ing|s)?\b/gi, t, function(){return {value:"ramp"}});
+    f.tent  = collect(/\b(?:let me check|i think|probably|maybe|should be able to|i'll try|pending approval|not sure)\b/gi, t, function(){return {value:"tentative"}});
+    return f;
+  }
+  function tentativeNear(f, item){
+    return f.tent.some(function(x){return x.end<=item.start && item.start-x.end<90});
+  }
+  function conf(f, key){
+    var a=f[key]; if(!a.length) return null;
+    if(distinct(a).length>1) return "low";
+    return a.some(function(i){return tentativeNear(f,i)}) ? "medium" : "high";
+  }
+
+  function pol(){
+    return {appr:+$("p-appr").value, ceil:+$("p-ceil").value, term:+$("p-term").value, net:+$("p-net").value, ramp:$("p-ramp").checked};
+  }
+
+  function evaluate(t){
+    var f = extract(t), P = pol(), F=[];
+    var seats=last(f.seats), disc=last(f.disc), term=last(f.term), bill=last(f.bill), pay=last(f.pay), plan=last(f.plan);
+    var planInferred=false;
+    if(!plan && seats){ plan = seats<50?"Starter":(seats<200?"Growth":"Enterprise"); planInferred=true; }
+
+    function add(sev,rule,msg){F.push({sev:sev,rule:rule,msg:msg})}
+
+    if(!seats) add("block","R01","Seat quantity not found in the transcript. A quote line cannot be drafted.");
+    if(!term) add("review","R01","Term length not found. Confirm the subscription term before drafting.");
+    var labels={seats:"seat quantity",disc:"discount",term:"term",bill:"billing frequency",pay:"payment terms",plan:"plan"};
+    Object.keys(labels).forEach(function(k){
+      var d=distinct(f[k]);
+      if(d.length>1) add("review","R02","Conflicting "+labels[k]+" values mentioned on the call: "+d.join(", ")+". The latest value is used in the draft and a human must confirm.");
+    });
+    if(disc!==null && disc>P.ceil) add("block","R03","Discount of "+disc+"% exceeds the hard ceiling of "+P.ceil+"%. The line cannot be drafted.");
+    else if(disc!==null && disc>P.appr) add("review","R03","Discount of "+disc+"% exceeds the "+P.appr+"% threshold. Deal Desk approval is required.");
+    if(disc!==null && disc>10 && term && term<P.term) add("review","R04","A "+term+"-month term with a "+disc+"% discount is below the "+P.term+"-month minimum for discounted deals.");
+    if(pay!==null && pay>P.net) add("review","R05","Payment terms of net "+pay+" exceed the net "+P.net+" policy. Finance review is required.");
+    if(bill && bill!=="annual" && term && term>=12) add("review","R06","Billing frequency is "+bill+" on a "+term+"-month term. Confirm invoicing setup and credit exposure.");
+    if(f.ramp.length && !P.ramp) add("review","R07","A ramp was mentioned. A ramp cannot be expressed in a single quote line and needs a segmented subscription.");
+    if(f.tent.length){
+      var hit=["seats","disc","term","bill","pay"].filter(function(k){return f[k].some(function(i){return tentativeNear(f,i)})});
+      if(hit.length) add("review","R08","Tentative language precedes "+hit.map(function(k){return labels[k]}).join(", ")+". The rep must confirm these were committed.");
+    }
+    if(planInferred) add("info","R09","No plan was named. "+plan+" was inferred from seat count and must be confirmed.");
+    if(!F.length) add("info","R00","No findings. All extracted terms are single-valued, within policy and stated without tentative language.");
+
+    var status = F.some(function(x){return x.sev==="block"}) ? "block" : (F.some(function(x){return x.sev==="review"}) ? "review" : "ok");
+    var quote=null;
+    if(seats && plan){
+      var unit=PRICE[plan], d=disc||0, netAnnual=seats*unit*12*(1-d/100);
+      quote={plan:plan, quantity:seats, unit_list_per_seat_month:unit, discount_pct:d, term_months:term, billing:bill, payment_terms_days:pay, net_annual:Math.round(netAnnual), total_contract_value: term? Math.round(netAnnual*term/12):null};
+    }
+    return {f:f, F:F, status:status, quote:quote, planInferred:planInferred, vals:{seats:seats,disc:disc,term:term,bill:bill,pay:pay,plan:plan}};
+  }
+
+  function renderEvidence(t,f){
+    var spans=[];
+    ["seats","disc","term","bill","pay","plan","ramp","tent"].forEach(function(k){f[k].forEach(function(i){spans.push({k:k,s:i.start,e:i.end})})});
+    spans.sort(function(a,b){return a.s-b.s||b.e-a.e});
+    var html="", pos=0;
+    spans.forEach(function(x){
+      if(x.s<pos) return;
+      html+=esc(t.slice(pos,x.s))+'<mark class="'+x.k+'">'+esc(t.slice(x.s,x.e))+'</mark>';
+      pos=x.e;
+    });
+    html+=esc(t.slice(pos));
+    $("ev").innerHTML=html;
+  }
+
+  function renderResult(r){
+    var f=r.f, n=0; ["seats","disc","term","bill","pay","plan","ramp"].forEach(function(k){n+=f[k].length});
+    var nf=r.F.filter(function(x){return x.rule!=="R00"}).length;
+    var label={ok:"Auto-draft eligible",review:"Needs review",block:"Blocked"}[r.status];
+    $("steps").innerHTML =
+      '<div class="step"><b>Extract</b><span>'+n+' signals</span></div>'+
+      '<div class="step"><b>Map</b><span>'+(r.quote?"1 quote line":"No line")+'</span></div>'+
+      '<div class="step"><b>Validate</b><span>'+nf+' finding'+(nf===1?"":"s")+'</span></div>'+
+      '<div class="step"><b>Route</b><span>'+label+'</span></div>';
+    var cls={ok:"ok",review:"warn",block:"bad"}[r.status];
+    var sub={ok:"The draft can proceed to the standard CPQ approval chain.",review:"A human must resolve the findings below before the draft is created.",block:"The draft is not created until the blocking findings are resolved."}[r.status];
+    $("status").innerHTML='<div class="status '+cls+'"><div>'+label+'<small>'+sub+'</small></div></div>';
+
+    var q=r.quote;
+    if(!q){ $("quote").innerHTML='<p style="margin:0;color:var(--muted);font-size:14px">No quote line could be mapped. Seats and plan are required.</p>'; }
+    else {
+      var c=function(k){var v=conf(f,k); return v?' <span class="rule">('+v+' confidence)</span>':""};
+      $("quote").innerHTML=
+        '<table><thead><tr><th>Line</th><th class="num">Qty</th><th class="num">List / seat / mo</th><th class="num">Disc.</th><th class="num">Net / year</th></tr></thead><tbody>'+
+        '<tr><td>'+q.plan+' subscription'+(r.planInferred?' <span class="rule">(inferred)</span>':c("plan"))+'</td><td class="num">'+q.quantity+'</td><td class="num">'+fmt.format(q.unit_list_per_seat_month)+'</td><td class="num">'+q.discount_pct+'%</td><td class="num">'+fmt.format(q.net_annual)+'</td></tr></tbody></table>'+
+        '<dl class="kv"><dt>Term</dt><dd>'+(q.term_months?q.term_months+' months':"Not found")+c("term")+'</dd>'+
+        '<dt>Billing</dt><dd>'+(q.billing||"Not found")+c("bill")+'</dd>'+
+        '<dt>Payment terms</dt><dd>'+(q.payment_terms_days?"Net "+q.payment_terms_days:"Not found")+c("pay")+'</dd>'+
+        '<dt>Contract value</dt><dd>'+(q.total_contract_value!==null?fmt.format(q.total_contract_value):"Needs a term")+'</dd></dl>';
+    }
+
+    $("findings").innerHTML=r.F.map(function(x){
+      var t={block:"Block",review:"Review",info:"Info"}[x.sev];
+      return '<li><span class="tag '+x.sev+'">'+t+'</span>'+esc(x.msg)+'<span class="rule">'+x.rule+'</span></li>';
+    }).join("");
+
+    var fields={};
+    [["seats","seats"],["discount_pct","disc"],["term_months","term"],["billing","bill"],["payment_terms_days","pay"],["plan","plan"]].forEach(function(p){
+      var arr=f[p[1]];
+      fields[p[0]]=arr.length?{value:last(arr),confidence:conf(f,p[1]),evidence:arr.map(function(i){return i.raw}),conflict:distinct(arr).length>1}:null;
+    });
+    fields.ramp_mentioned=f.ramp.length>0;
+    var payload={route:r.status==="ok"?"auto_draft":(r.status==="review"?"needs_review":"blocked"),fields:fields,findings:r.F.map(function(x){return {rule:x.rule,severity:x.sev,message:x.msg}}),quote_draft:q};
+    $("json").textContent=JSON.stringify(payload,null,2);
+  }
+
+  function run(){
+    var t=$("tx").value;
+    var P=pol();
+    $("o-appr").textContent=P.appr+"%"; $("o-ceil").textContent=P.ceil+"%"; $("o-term").textContent=P.term+" mo"; $("o-net").textContent="Net "+P.net;
+    var r=evaluate(t);
+    renderEvidence(t,r.f);
+    renderResult(r);
+  }
+
+  document.querySelectorAll(".chip").forEach(function(b){
+    b.addEventListener("click",function(){
+      document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")});
+      b.setAttribute("aria-pressed","true");
+      $("tx").value=SCEN[b.dataset.s]; run();
+    });
+  });
+  $("tx").addEventListener("input",function(){
+    document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")});
+    run();
+  });
+  ["p-appr","p-ceil","p-term","p-net","p-ramp"].forEach(function(id){$(id).addEventListener("input",run)});
+  $("copy").addEventListener("click",function(){
+    try{navigator.clipboard.writeText($("json").textContent); $("copy").textContent="Copied"; setTimeout(function(){$("copy").textContent="Copy JSON"},1200);}catch(e){}
+  });
+
+  $("tx").value=SCEN.clean; run();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Sales Cloud: Opportunity Stage Exit Checklist | Andres Videla</title>
+<meta name="description" content="An interactive demo with fictional data on a Lightning-style Opportunities list view and record page: pick a stage on the Path, and a validation rule and a Flow decide whether the opportunity can advance.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://andres-videla.com/demo/stage-exit-checklist/">
+<link rel="canonical" href="https://andres-videla.com/demo/stage-exit-checklist/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:title" content="Salesforce Sales Cloud: Opportunity Stage Exit Checklist">
+<meta property="og:description" content="A stage change should cost something. Try it on a Lightning-style opportunity record, with the validation rule and Flow that block it.">
+<meta property="og:image" content="https://andres-videla.com/assets/stage-exit-checklist-demo.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6; --accent:#2F4B6E;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sf-bg:#F3F3F3; --sf-card:#FFFFFF; --sf-line:#DDDBDA; --sf-ink:#181818; --sf-muted:#5C5C5C; --sf-soft:#FAFAF9;
+  --sf-brand:#0176D3; --sf-brand-ink:#FFFFFF; --sf-hover:#F3F3F3; --sf-sel:#EEF4FF;
+  --sf-done:#2E844A; --sf-todo:#C9C7C5; --sf-todo-ink:#3E3E3C;
+  --sf-ok-bg:#CDEFC4; --sf-ok:#0B5A24; --sf-warn-bg:#FFE9B5; --sf-warn:#6B4A00; --sf-err-bg:#FEDED8; --sf-err:#8E030B; --sf-err-line:#BA0517;
+  --sf-info-bg:#E5F2FD; --sf-info:#014486; --sf-mark:#FFF1A8; --sf-code:#F7F7F6;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946; --accent:#8FB3E6; color-scheme:dark;
+    --sf-bg:#12161C; --sf-card:#1C222B; --sf-line:#333B47; --sf-ink:#E7EBF1; --sf-muted:#9AA6B5; --sf-soft:#232A34;
+    --sf-brand:#5EB0F5; --sf-brand-ink:#0B1622; --sf-hover:#232A34; --sf-sel:#16304D;
+    --sf-done:#4BCA81; --sf-todo:#3A4452; --sf-todo-ink:#C9D1DC;
+    --sf-ok-bg:#1C3A28; --sf-ok:#8BE0A8; --sf-warn-bg:#3D2F15; --sf-warn:#F0C27A; --sf-err-bg:#43201E; --sf-err:#FBA39B; --sf-err-line:#F58B82;
+    --sf-info-bg:#14304A; --sf-info:#9CCBF5; --sf-mark:#5A4B12; --sf-code:#161B22;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946; --accent:#8FB3E6; color-scheme:dark;
+  --sf-bg:#12161C; --sf-card:#1C222B; --sf-line:#333B47; --sf-ink:#E7EBF1; --sf-muted:#9AA6B5; --sf-soft:#232A34;
+  --sf-brand:#5EB0F5; --sf-brand-ink:#0B1622; --sf-hover:#232A34; --sf-sel:#16304D;
+  --sf-done:#4BCA81; --sf-todo:#3A4452; --sf-todo-ink:#C9D1DC;
+  --sf-ok-bg:#1C3A28; --sf-ok:#8BE0A8; --sf-warn-bg:#3D2F15; --sf-warn:#F0C27A; --sf-err-bg:#43201E; --sf-err:#FBA39B; --sf-err-line:#F58B82;
+  --sf-info-bg:#14304A; --sf-info:#9CCBF5; --sf-mark:#5A4B12; --sf-code:#161B22;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);overflow-wrap:anywhere}
+:focus-visible{outline:2px solid var(--sf-brand);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.back{color:var(--accent);display:inline-block;margin-bottom:14px;font-size:14px}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 20px 48px}
+h1{font:700 clamp(1.6rem,3.6vw,2.4rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:50rem;margin:0 0 14px}
+.cap{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+
+.sf{position:relative;background:var(--sf-bg);color:var(--sf-ink);border:1px solid var(--sf-line);border-radius:8px;overflow:hidden;font:14px/1.45 var(--sans)}
+.sf button{font:inherit;color:inherit;cursor:pointer}
+.sf-gh{display:flex;align-items:center;gap:14px;background:var(--sf-card);border-bottom:1px solid var(--sf-line);border-top:3px solid var(--sf-brand);padding:0 14px;min-height:46px}
+.sf-dots{display:grid;grid-template-columns:repeat(3,4px);gap:3px;flex:none}
+.sf-dots i{width:4px;height:4px;border-radius:50%;background:var(--sf-muted);display:block}
+.sf-app{font:600 16px var(--sans);flex:none}
+.sf-nav{display:flex;gap:2px;overflow:hidden;white-space:nowrap;min-width:0;align-self:stretch}
+.sf-nav span{display:flex;align-items:center;padding:0 10px;color:var(--sf-ink);font-size:13.5px;border-bottom:3px solid transparent}
+.sf-nav span.on{font-weight:700;border-bottom-color:var(--sf-brand)}
+.sf-body{display:grid;grid-template-columns:minmax(0,.86fr) minmax(0,1.3fr);gap:12px;padding:12px;align-items:start}
+.sf-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sf-card{background:var(--sf-card);border:1px solid var(--sf-line);border-radius:4px;min-width:0}
+.sf-head{display:flex;align-items:center;gap:10px;padding:10px 12px;flex-wrap:wrap}
+.sf-ico{width:32px;height:32px;border-radius:4px;background:#FCB95B;display:grid;place-items:center;flex:none}
+.sf-ico svg{width:20px;height:20px}
+.sf-ttl{min-width:0;flex:1 1 120px}
+.sf-ttl small{display:block;color:var(--sf-muted);font-size:11.5px}
+.sf-ttl b{display:block;font-size:17px;line-height:1.2}
+.sf-sum{display:block;color:var(--sf-muted);font-size:12px;margin-top:2px}
+.sf-btn{border:1px solid var(--sf-line);background:var(--sf-card);border-radius:4px;padding:5px 12px;font-size:13px;color:var(--sf-brand)}
+.sf-btn:hover{background:var(--sf-hover)}
+.sf-btn.brand{background:var(--sf-brand);border-color:var(--sf-brand);color:var(--sf-brand-ink);font-weight:600}
+.sf-btn.brand:hover{filter:brightness(1.08)}
+.sf-btn[disabled]{opacity:.55;cursor:not-allowed}
+.sf-searchrow{padding:0 12px 10px}
+.sf-search{width:100%;border:1px solid var(--sf-line);border-radius:4px;padding:6px 10px;background:var(--sf-card);color:var(--sf-ink);font:inherit}
+.sf-pills{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}
+.sf-pill{border:1px solid var(--sf-line);background:var(--sf-card);border-radius:999px;padding:3px 11px;font-size:12.5px;color:var(--sf-ink)}
+.sf-pill b{font-weight:700;margin-left:4px;color:var(--sf-muted)}
+.sf-pill[aria-pressed="true"]{background:var(--sf-brand);border-color:var(--sf-brand);color:var(--sf-brand-ink)}
+.sf-pill[aria-pressed="true"] b{color:var(--sf-brand-ink)}
+.sf-th,.sf-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.95fr) 60px 68px;gap:6px;align-items:center;padding:7px 12px}
+.sf-th{background:var(--sf-soft);border-top:1px solid var(--sf-line);border-bottom:1px solid var(--sf-line);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--sf-muted);white-space:nowrap}
+.sf-sort{background:none;border:0;padding:0;text-align:left;color:inherit;text-transform:inherit;letter-spacing:inherit;font-size:inherit;font-weight:700;display:inline-flex;gap:4px;align-items:center}
+.sf-sort:hover{color:var(--sf-brand)}
+.sf-sort i{font-style:normal;font-size:10px;min-width:8px}
+.sf-list{list-style:none;margin:0;padding:0}
+.sf-row{border-bottom:1px solid var(--sf-line);cursor:pointer;font-size:13px}
+.sf-row:last-child{border-bottom:0}
+.sf-row:hover{background:var(--sf-hover)}
+.sf-row[aria-selected="true"]{background:var(--sf-sel);box-shadow:inset 3px 0 0 var(--sf-brand)}
+.sf-c-name b{display:block;font-weight:600;color:var(--sf-brand)}
+.sf-c-name small{display:block;color:var(--sf-muted);font-size:11.5px}
+.sf-c-amt{text-align:right;font-variant-numeric:tabular-nums}
+.sf-c-gap{text-align:right}
+.sf-badge{display:inline-block;white-space:nowrap;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:var(--sf-soft);color:var(--sf-muted);border:1px solid var(--sf-line)}
+.sf-badge.warn{background:var(--sf-warn-bg);color:var(--sf-warn);border-color:transparent}
+.sf-badge.ok{background:var(--sf-ok-bg);color:var(--sf-ok);border-color:transparent}
+.sf-badge.err{background:var(--sf-err-bg);color:var(--sf-err);border-color:transparent}
+.sf-empty{padding:18px 12px;text-align:center;color:var(--sf-muted);font-size:13px}
+mark{background:var(--sf-mark);color:inherit;border-radius:2px;padding:0 1px}
+.sf-hl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 14px;padding:0 12px 12px}
+.sf-hl div small{display:block;color:var(--sf-muted);font-size:11.5px}
+.sf-hl div b{display:block;font-weight:600;font-size:13.5px}
+.sf-pathwrap{padding:4px 12px 12px}
+.sf-path{display:flex;margin:0;padding:0;list-style:none;gap:0}
+.sf-path li{flex:1 1 0;min-width:0;margin-left:-8px}
+.sf-path li:first-child{margin-left:0}
+.sf-step{width:100%;display:flex;align-items:center;justify-content:center;gap:5px;height:34px;border:0;padding:0 8px 0 14px;background:var(--sf-todo);color:var(--sf-todo-ink);font-size:12px;font-weight:600;letter-spacing:-.01em;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);position:relative}
+.sf-path li:first-child .sf-step{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%);padding-left:10px;border-radius:14px 0 0 14px}
+.sf-step.done{background:var(--sf-done);color:#fff}
+.sf-step.cur{background:var(--sf-brand);color:var(--sf-brand-ink)}
+.sf-step[aria-pressed="true"]{box-shadow:inset 0 -4px 0 rgba(0,0,0,.35)}
+.sf-pn{display:none}
+.sf-pl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-viewing{font-size:12px;color:var(--sf-muted);margin:6px 0 0}
+.sf-pactions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:0 12px 12px}
+.sf-alert{margin:0 12px 12px;border-radius:4px;padding:9px 12px;font-size:13px}
+.sf-alert[hidden]{display:none}
+.sf-alert b{display:block;margin-bottom:3px}
+.sf-alert ul{margin:0;padding-left:18px}
+.sf-alert.err{background:var(--sf-err-bg);color:var(--sf-err);border:1px solid var(--sf-err-line)}
+.sf-alert.ok{background:var(--sf-ok-bg);color:var(--sf-ok)}
+.sf-alert.info{background:var(--sf-info-bg);color:var(--sf-info)}
+.sf-sec{padding:12px;border-top:1px solid var(--sf-line)}
+.sf-sec h3{margin:0 0 8px;font-size:13px;font-weight:700}
+.sf-kf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.sf-fld label{display:block;font-size:12px;color:var(--sf-muted);margin-bottom:2px}
+.sf-fld label code{font-family:var(--mono);font-size:11px}
+.sf-in{width:100%;border:1px solid var(--sf-line);border-radius:4px;padding:5px 8px;background:var(--sf-card);color:var(--sf-ink);font:inherit}
+.sf-in.bad{border-color:var(--sf-err-line);box-shadow:0 0 0 1px var(--sf-err-line)}
+.sf-fld .sf-msg{color:var(--sf-err);font-size:12px;margin-top:2px}
+.sf-chk{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.sf-guide{background:var(--sf-soft);border:1px solid var(--sf-line);border-radius:4px;padding:8px 10px;font-size:12.5px;color:var(--sf-muted);margin:10px 0 0}
+.sf-guide b{color:var(--sf-ink)}
+.sf-link{background:none;border:0;padding:0;color:var(--sf-brand);text-decoration:underline;font-size:12.5px}
+.sf-tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--sf-line);padding:0 12px}
+.sf-tab{background:none;border:0;border-bottom:3px solid transparent;padding:9px 10px 7px;font-size:13px;color:var(--sf-muted)}
+.sf-tab[aria-selected="true"]{color:var(--sf-ink);font-weight:700;border-bottom-color:var(--sf-brand)}
+.sf-tab b{color:var(--sf-muted);font-weight:600;margin-left:3px}
+.sf-panel{padding:12px}
+.sf-crumb{font-size:11.5px;color:var(--sf-muted);margin:0 0 6px}
+.sf-meta{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13px;margin:0 0 8px}
+.sf-meta code{font-family:var(--mono);font-size:12px}
+.sf-code{font:12.5px/1.55 var(--mono);background:var(--sf-code);border:1px solid var(--sf-line);border-radius:4px;padding:8px 0;margin:0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.sf-code .l{display:block;padding:0 10px;border-left:3px solid transparent}
+.sf-code .l.hit{background:var(--sf-err-bg);color:var(--sf-err);border-left-color:var(--sf-err-line)}
+.sf-note{font-size:12px;color:var(--sf-muted);margin:8px 0 0}
+.sf-nodes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sf-nodes li{border:1px solid var(--sf-line);border-left:4px solid var(--sf-line);border-radius:4px;padding:6px 10px;font-size:12.5px;background:var(--sf-card)}
+.sf-nodes li b{display:block;font-size:12px;color:var(--sf-muted);text-transform:uppercase;letter-spacing:.04em}
+.sf-nodes li.hit{border-left-color:var(--sf-err-line);background:var(--sf-err-bg);color:var(--sf-err)}
+.sf-nodes li.hit b{color:var(--sf-err)}
+.sf-rl{width:100%;border-collapse:collapse;font-size:13px;margin:0 0 10px}
+.sf-rl th,.sf-rl td{text-align:left;padding:6px 6px;border-bottom:1px solid var(--sf-line)}
+.sf-rl th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--sf-muted)}
+.sf-add{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sf-trace{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 12px;margin:0;font-size:13px}
+.sf-trace dt{color:var(--sf-muted);font-size:12px}
+.sf-trace dd{margin:0}
+.sf-trace ul{margin:0;padding-left:18px}
+.sf-toast{position:absolute;left:50%;top:54px;transform:translateX(-50%);z-index:5;max-width:min(92%,460px);padding:9px 14px;border-radius:4px;font-size:13px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none}
+.sf-toast.on{display:block}
+.sf-toast.err{background:var(--sf-err-bg);color:var(--sf-err);border:1px solid var(--sf-err-line)}
+.sf-toast.ok{background:var(--sf-ok-bg);color:var(--sf-ok)}
+.sf-toast.warn{background:var(--sf-warn-bg);color:var(--sf-warn)}
+.sf-toast.info{background:var(--sf-info-bg);color:var(--sf-info)}
+
+.real{margin-top:28px}
+.real h2{font:700 1.3rem/1.2 var(--serif);margin:0 0 12px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--rule);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+footer{margin-top:24px;font-size:13px;color:var(--muted)}
+
+@media (max-width:900px){
+  .sf-body{grid-template-columns:1fr}
+}
+@media (max-width:700px){
+  .sf-gh{flex-wrap:wrap;padding:8px 10px;gap:8px 10px}
+  .sf-nav{display:none}
+  .sf-hl{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sf-kf{grid-template-columns:1fr}
+  .sf-trace{grid-template-columns:1fr;gap:2px}
+  .sf-trace dd{margin-bottom:6px}
+  .sf-th,.sf-row{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"name gap" "stage amt"}
+  .sf-th{display:flex;flex-wrap:wrap;gap:6px 14px}
+  .sf-c-name{grid-area:name} .sf-c-stage{grid-area:stage;color:var(--sf-muted)} .sf-c-amt{grid-area:amt} .sf-c-gap{grid-area:gap}
+  .sf-c-amt{text-align:right}
+}
+@media (max-width:560px){
+  .wrap{padding:16px 14px 40px}
+  .sf-body{padding:8px;gap:8px}
+  .sf-pn{display:inline}
+  .sf-pl{display:none}
+  .sf-step{padding:0 10px 0 14px}
+  .sf-tab{padding:9px 7px 7px;font-size:12.5px}
+}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative simulator with generic Lightning-style styling, not the real product interface. The opportunities, contacts and fields are fictional, no real systems or data are involved, and the exit criteria are examples, not a recommended standard.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce Sales Cloud: Opportunity Stage Exit Checklist</h1>
+  <p class="dek">Pipeline inflates when a stage change costs nothing. Below is a Lightning-style Opportunities list view with a record page beside it. Pick a record, choose a stage on the Path and click Mark as Current Stage, and watch a validation rule and a Flow decide. Fix the fields and try again, or switch the rule off to see what an unguarded save lets through.</p>
+
+  <div class="sf" id="sf">
+    <div class="sf-toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="sf-gh">
+      <div class="sf-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="sf-app">Sales</div>
+      <div class="sf-nav" aria-hidden="true"><span>Home</span><span>Accounts</span><span class="on">Opportunities</span><span>Reports</span></div>
+    </div>
+    <div class="sf-body">
+      <div class="sf-col">
+        <section class="sf-card" aria-labelledby="lv-t">
+          <div class="sf-head">
+            <div class="sf-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 7-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="sf-ttl"><small>Opportunities</small><b id="lv-t">Open Opportunities</b><span class="sf-sum" id="sum"></span></div>
+            <button class="sf-btn" id="reset" type="button">Reset</button>
+          </div>
+          <div class="sf-searchrow"><input class="sf-search" id="q" type="search" placeholder="Search this list..." aria-label="Search this list by opportunity, account or stage" autocomplete="off"></div>
+          <div class="sf-pills" id="pills" role="group" aria-label="List filter"></div>
+          <div class="sf-th" id="th"></div>
+          <ul class="sf-list" id="list" role="listbox" aria-label="Opportunities"></ul>
+        </section>
+      </div>
+
+      <div class="sf-col">
+        <section class="sf-card" aria-labelledby="rec-t" id="rec">
+          <div class="sf-head">
+            <div class="sf-ico" aria-hidden="true" style="background:#FCB95B"><svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 7-9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="sf-ttl"><small>Opportunity</small><b id="rec-t"></b></div>
+          </div>
+          <div class="sf-hl" id="hl"></div>
+          <div class="sf-pathwrap">
+            <ol class="sf-path" id="path" aria-label="Opportunity stage Path"></ol>
+            <p class="sf-viewing" id="viewing"></p>
+          </div>
+          <div class="sf-pactions"><span class="sf-note" id="pnote" style="margin:0"></span><button class="sf-btn brand" id="mark" type="button"></button></div>
+          <div class="sf-alert" id="alert" role="status" aria-live="polite" hidden></div>
+          <div class="sf-sec" id="kf"></div>
+        </section>
+
+        <section class="sf-card" aria-label="Record tabs">
+          <div class="sf-tabs" id="tabs" role="tablist" aria-label="Record tabs"></div>
+          <div class="sf-panel" id="panel" role="tabpanel" aria-live="polite"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid">
+      <div><b>Data sources</b><ul>
+        <li>Standard Opportunity fields: StageName, Amount, CloseDate, NextStep and LeadSource.</li>
+        <li>OpportunityContactRole for contact roles, checked in a Flow because a validation rule reads the record and its parents, not child rows.</li>
+        <li>A handful of custom fields per stage (the __c names here are illustrative), chosen with sales leadership.</li>
+        <li>Opportunity stage history for measuring the effect afterwards.</li>
+      </ul></div>
+      <div><b>Limits and prerequisites</b><ul>
+        <li>The stage values in the formulas must match the picklist values in the org: confirm in the target org.</li>
+        <li>Validation rules also run on API saves and data loads, so integrations need a bypass such as a custom permission: confirm in the target org.</li>
+        <li>The rule fires when the stage changes, in either direction, so open opportunities already in a stage are not blocked until they move.</li>
+        <li>Path shows up to five key fields and up to 1,000 characters of guidance per stage, but it does not enforce anything by itself.</li>
+        <li>An error location of a field falls back to Top of Page if that field is not on the page layout. A Flow Custom Error message is limited to 255 characters.</li>
+        <li>List view search covers only the first 2,000 records in the list.</li>
+      </ul></div>
+      <div><b>How it would be validated</b><ul>
+        <li>Sandbox tests per stage, including jumping over stages, moving backwards, bulk updates and an integration user.</li>
+        <li>A pilot with one team, reviewing the error messages with the reps who see them.</li>
+        <li>Before and after comparison of stage changes and time in stage from opportunity history reports, with the same filters.</li>
+      </ul></div>
+    </div>
+    <p class="rnote">Standard Salesforce behavior on this screen: list view search, column sorting and filters, the Path with its key fields, the Mark Stage as Complete and Mark as Current Stage buttons, validation rule errors, and the Flow Custom Error element. Illustrative: the Gaps column, the Inflated and Ready to advance filters, the Setup, Flow and Why tabs beside the record, the custom fields, the stage criteria and all data.</p>
+    <p class="rnote">What this demo does not claim: that these checklist items fit your sales process, that enforcement improves forecast accuracy by any amount, or that every stage needs every check. Each item has a cost for the rep, so start with the few that the forecast review actually asks about.</p>
+    <p class="rnote">References: <a href="https://developer.salesforce.com/docs/atlas.en-us.usefulValidationRules.meta/usefulValidationRules/fields_useful_validation_formulas_oppty_mgmt.htm" rel="noopener">Sample opportunity management validation rules</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=sf.fields_validation_rules_tips.htm&amp;type=5" rel="noopener">Tips for writing validation rules</a>, <a href="https://trailhead.salesforce.com/content/learn/modules/validation-rules/implement-best-practices" rel="noopener">Validation rule best practices on Trailhead</a>, <a href="https://help.salesforce.com/s/articleView?id=platform.flow_ref_elements_custom_error.htm&amp;language=en_US&amp;type=5" rel="noopener">Flow Custom Error element</a>, <a href="https://help.salesforce.com/s/articleView?id=sf.path_create.htm&amp;language=en_US&amp;type=5" rel="noopener">Create a Path</a>, <a href="https://trailhead.salesforce.com/content/learn/modules/opportunity-record-step-by-step/work-with-an-opportunity-record" rel="noopener">Work with an opportunity record on Trailhead</a>, <a href="https://help.salesforce.com/s/articleView?id=basics_search_list_views_lex.htm&amp;language=en_US&amp;type=5" rel="noopener">Search list views</a>, <a href="https://help.salesforce.com/s/articleView?id=xcloud.basics_sorting_list_views.htm&amp;language=en_US&amp;type=5" rel="noopener">Sort list views</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Salesforce and Sales Cloud are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by Salesforce.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(i){return document.getElementById(i)};
+  var TODAY="2026-10-28";
+  var STAGES=["Qualification","Discovery","Proposal","Negotiation","Closed Won"];
+  var SOURCES=["","Webinar","Referral","Partner","Event","Web"];
+  function T(f){return function(o){return String(o[f]||"").trim()!==""}}
+  var CRIT={
+    1:[
+      {k:"ns",f:"nextStep",label:"Next step with a date",api:"NextStep",how:"rule",kind:"text",test:T("nextStep"),cond:"ISBLANK(NextStep)",msg:"Enter a next step with a date."},
+      {k:"ls",f:"leadSource",label:"Lead source",api:"LeadSource",how:"rule",kind:"pick",test:T("leadSource"),cond:"ISPICKVAL(LeadSource, \"\")",msg:"Choose a lead source."},
+      {k:"pc",label:"Primary contact role",api:"OpportunityContactRole",how:"flow",test:function(o){return o.roles.some(function(r){return r.p})},where:"IsPrimary Equals true",msg:"Add a primary contact role before moving to Discovery."}
+    ],
+    2:[
+      {k:"am",f:"amount",label:"Amount above zero",api:"Amount",how:"rule",kind:"num",test:function(o){return Number(o.amount)>0},cond:"OR(ISBLANK(Amount), Amount <= 0)",msg:"Enter an amount above zero."},
+      {k:"bc",f:"bc",label:"Business case summary",api:"Business_Case__c",how:"rule",kind:"text",test:T("bc"),cond:"ISBLANK(Business_Case__c)",msg:"Summarize the business case.",custom:true},
+      {k:"dm",label:"Decision maker contact role",api:"OpportunityContactRole",how:"flow",test:function(o){return o.roles.some(function(r){return r.r==="Decision Maker"})},where:"Role Equals \"Decision Maker\"",msg:"Add a Decision Maker contact role before moving to Proposal."},
+      {k:"cd",f:"closeDate",label:"Close date today or later",api:"CloseDate",how:"rule",kind:"date",test:function(o){return o.closeDate>=TODAY},cond:"CloseDate < TODAY()",msg:"Move the close date to today or later."}
+    ],
+    3:[
+      {k:"bu",f:"budget",label:"Budget confirmed",api:"Budget_Confirmed__c",how:"rule",kind:"bool",test:function(o){return o.budget===true},cond:"Budget_Confirmed__c = FALSE",msg:"Confirm the budget with the buyer.",custom:true},
+      {k:"mp",f:"plan",label:"Mutual close plan link",api:"Mutual_Plan_URL__c",how:"rule",kind:"text",test:T("plan"),cond:"ISBLANK(Mutual_Plan_URL__c)",msg:"Add the mutual close plan link.",custom:true},
+      {k:"ns",f:"nextStep",label:"Next step with a date",api:"NextStep",how:"rule",kind:"text",test:T("nextStep"),cond:"ISBLANK(NextStep)",msg:"Enter a next step with a date."}
+    ],
+    4:[
+      {k:"cs",f:"signed",label:"Signed contract date",api:"Contract_Signed_Date__c",how:"rule",kind:"date",test:T("signed"),cond:"ISBLANK(Contract_Signed_Date__c)",msg:"Enter the signed contract date.",custom:true},
+      {k:"oo",f:"owner",label:"Onboarding owner assigned",api:"Onboarding_Owner__c",how:"rule",kind:"text",test:T("owner"),cond:"ISBLANK(Onboarding_Owner__c)",msg:"Assign an onboarding owner.",custom:true},
+      {k:"am",f:"amount",label:"Amount above zero",api:"Amount",how:"rule",kind:"num",test:function(o){return Number(o.amount)>0},cond:"OR(ISBLANK(Amount), Amount <= 0)",msg:"Enter an amount above zero."}
+    ]
+  };
+  var GUIDE={
+    0:"Qualification is the entry stage. No exit rule applies when an opportunity lands here.",
+    1:"Confirm who the primary contact is and when the next conversation happens before the opportunity counts as Discovery.",
+    2:"A proposal needs an amount, a short business case and the person who can say yes. Check the close date still makes sense.",
+    3:"Negotiation means the buyer has budget and both sides have written down how the deal closes.",
+    4:"Closed Won needs the signed date and a named owner for onboarding, so the handoff is not a surprise."
+  };
+  var POOL=["Lena Okafor","Marc Dubois","Priya Nair","Tomas Weber","Isla Brandt","Kofi Mensah"];
+  var SEED=[
+    {id:"o1",name:"Fleet Platform",acct:"Halcyon Freight",stage:0,amount:48000,closeDate:"2026-12-15",nextStep:"",leadSource:"Webinar",bc:"",budget:false,plan:"",signed:"",owner:"",roles:[]},
+    {id:"o2",name:"Clinic Scheduling",acct:"Brightwater Clinics",stage:1,amount:120000,closeDate:"2026-12-01",nextStep:"Demo on Nov 4",leadSource:"Referral",bc:"",budget:false,plan:"",signed:"",owner:"",roles:[{n:"Lena Okafor",r:"Evaluator",p:true}]},
+    {id:"o3",name:"Alloy Quoting",acct:"Ostrava Metals",stage:2,amount:86000,closeDate:"2026-11-20",nextStep:"Send redlines",leadSource:"Partner",bc:"Replace manual quoting",budget:false,plan:"",signed:"",owner:"",roles:[{n:"Marc Dubois",r:"Influencer",p:true}]},
+    {id:"o4",name:"Lab Portal",acct:"Pinecrest Labs",stage:3,amount:64000,closeDate:"2026-11-12",nextStep:"Legal review call",leadSource:"Event",bc:"Faster sample tracking",budget:true,plan:"pinecrest.example/plan",signed:"2026-10-26",owner:"Riley Chen",roles:[{n:"Priya Nair",r:"Decision Maker",p:true}]},
+    {id:"o5",name:"Order Accuracy",acct:"Marlow Foods",stage:1,amount:30000,closeDate:"2026-12-20",nextStep:"Intro call",leadSource:"Event",bc:"Reduce order errors",budget:false,plan:"",signed:"",owner:"",roles:[{n:"Tomas Weber",r:"Decision Maker",p:true}]},
+    {id:"o6",name:"Grid Analytics",acct:"Tidewell Energy",stage:0,amount:0,closeDate:"2026-10-10",nextStep:"Call",leadSource:"",bc:"",budget:false,plan:"",signed:"",owner:"",roles:[]},
+    {id:"o7",name:"Textile ERP Add-on",acct:"Ridgeline Textiles",stage:3,amount:90000,closeDate:"2026-11-30",nextStep:"",leadSource:"Web",bc:"Unify two plants",budget:false,plan:"",signed:"",owner:"",roles:[{n:"Isla Brandt",r:"Evaluator",p:true}]}
+  ];
+  var st;
+  function fresh(){return {opps:JSON.parse(JSON.stringify(SEED)),sel:"o2",view:2,q:"",pill:"all",sort:{col:null,dir:null},tab:"rule",active:true,pending:null,trace:null,toastT:null}}
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+  function hi(text){
+    var t=esc(text),q=st.q.trim();
+    if(!q)return t;
+    var i=text.toLowerCase().indexOf(q.toLowerCase());
+    if(i<0)return t;
+    return esc(text.slice(0,i))+"<mark>"+esc(text.slice(i,i+q.length))+"</mark>"+esc(text.slice(i+q.length));
+  }
+  function opp(id){return st.opps.filter(function(o){return o.id===id})[0]}
+  function crit(i){return CRIT[i]||[]}
+  function miss(o,i){return crit(i).filter(function(it){return !it.test(o)})}
+  function money(n){n=Number(n)||0;return n>=1000?"$"+Math.round(n/1000)+"K":"$"+n}
+  function gaps(o){return miss(o,o.stage).length}
+  function ready(o){return o.stage<4&&miss(o,o.stage+1).length===0}
+  function ruleName(i){return "Exit_Criteria_"+STAGES[i].replace(" ","_")}
+
+  function rows(){
+    var q=st.q.trim().toLowerCase();
+    var a=st.opps.filter(function(o){
+      if(st.pill==="inflated"&&gaps(o)===0)return false;
+      if(st.pill==="ready"&&!ready(o))return false;
+      if(q&&(o.name+" "+o.acct+" "+STAGES[o.stage]).toLowerCase().indexOf(q)<0)return false;
+      return true;
+    });
+    var s=st.sort;
+    if(s.col){
+      var val={name:function(o){return o.name.toLowerCase()},stage:function(o){return o.stage},amount:function(o){return Number(o.amount)||0},gaps:function(o){return gaps(o)}}[s.col];
+      a=a.slice().sort(function(x,y){var u=val(x),v=val(y);var c=u<v?-1:u>v?1:0;return s.dir==="desc"?-c:c});
+    }
+    return a;
+  }
+  function counts(){
+    var all=st.opps.length,inf=0,rd=0;
+    st.opps.forEach(function(o){if(gaps(o)>0)inf++;if(ready(o))rd++});
+    return {all:all,inflated:inf,ready:rd};
+  }
+
+  function renderPills(){
+    var c=counts();
+    var P=[["all","All"],["inflated","Inflated"],["ready","Ready to advance"]];
+    $("pills").innerHTML=P.map(function(p){return '<button class="sf-pill" type="button" data-p="'+p[0]+'" aria-pressed="'+(st.pill===p[0])+'">'+p[1]+'<b>'+c[p[0]]+'</b></button>'}).join("");
+  }
+  var COLS=[["name","Opportunity"],["stage","Stage"],["amount","Amount"],["gaps","Gaps"]];
+  function renderTh(){
+    $("th").innerHTML=COLS.map(function(c){
+      var d=st.sort.col===c[0]?st.sort.dir:null;
+      var arrow=d==="asc"?"▲":d==="desc"?"▼":"";
+      var next=d===null?"ascending":d==="asc"?"descending":"no sorting";
+      var cur=d===null?"not sorted":d==="asc"?"sorted ascending":"sorted descending";
+      return '<span class="sf-c-'+(c[0]==="name"?"name":c[0]==="stage"?"stage":c[0]==="amount"?"amt":"gap")+'" role="columnheader" aria-sort="'+(d===null?"none":d==="asc"?"ascending":"descending")+'"><button class="sf-sort" type="button" data-c="'+c[0]+'" aria-label="Sort by '+c[1]+', '+cur+'. Activate for '+next+'.">'+c[1]+'<i aria-hidden="true">'+arrow+'</i></button></span>';
+    }).join("");
+  }
+  function renderSummary(rs){
+    var s=st.sort.col?("Sorted by "+COLS.filter(function(c){return c[0]===st.sort.col})[0][1]+" ("+(st.sort.dir==="asc"?"ascending":"descending")+")"):"No sorting";
+    var f=st.pill==="all"?"All opportunities":st.pill==="inflated"?"Inflated":"Ready to advance";
+    $("sum").textContent=rs.length+" item"+(rs.length===1?"":"s")+" • "+s+" • Filtered by "+f;
+  }
+  function renderList(){
+    var rs=rows();
+    renderSummary(rs);
+    if(!rs.length){$("list").innerHTML='<li class="sf-empty" role="presentation">No items to display.</li>';return}
+    var vis=rs.some(function(o){return o.id===st.sel});
+    $("list").innerHTML=rs.map(function(o,i){
+      var g=gaps(o);
+      var tab=(vis?o.id===st.sel:i===0)?0:-1;
+      return '<li class="sf-row" role="option" id="r-'+o.id+'" data-id="'+o.id+'" tabindex="'+tab+'" aria-selected="'+(o.id===st.sel)+'">'+
+        '<span class="sf-c-name"><b>'+hi(o.name)+'</b><small>'+hi(o.acct)+'</small></span>'+
+        '<span class="sf-c-stage">'+hi(STAGES[o.stage])+'</span>'+
+        '<span class="sf-c-amt">'+money(o.amount)+'</span>'+
+        '<span class="sf-c-gap">'+(g?'<span class="sf-badge warn">'+g+' open</span>':'<span class="sf-badge ok">None</span>')+'</span></li>';
+    }).join("");
+  }
+
+  function renderRecordHead(){
+    var o=opp(st.sel);
+    $("rec-t").textContent=o.name;
+    $("hl").innerHTML=[["Account",o.acct],["Amount",money(o.amount)],["Close Date",o.closeDate||"None"],["Stage",STAGES[o.stage]]].map(function(x){return '<div><small>'+x[0]+'</small><b>'+esc(x[1])+'</b></div>'}).join("");
+    $("path").innerHTML=STAGES.map(function(n,i){
+      var cls=i<o.stage?"done":i===o.stage?"cur":"";
+      return '<li><button class="sf-step '+cls+'" type="button" data-s="'+i+'" aria-pressed="'+(i===st.view)+'" aria-label="'+esc(n)+(i<o.stage?", completed":i===o.stage?", current stage":"")+'"><span class="sf-pn">'+(i<o.stage?"✓":(i+1))+'</span><span class="sf-pl">'+esc(n)+'</span></button></li>';
+    }).join("");
+    $("viewing").textContent="Viewing stage "+(st.view+1)+" of 5: "+STAGES[st.view]+(st.view===o.stage?" (current)":"")+".";
+    var b=$("mark");
+    if(st.view===o.stage){
+      if(o.stage===4){b.textContent="Change Closed State";b.disabled=true;$("pnote").textContent="This opportunity is closed.";}
+      else{b.textContent="Mark Stage as Complete";b.disabled=false;$("pnote").textContent="Moves to "+STAGES[o.stage+1]+".";}
+    }else{b.textContent="Mark as Current Stage";b.disabled=false;$("pnote").textContent="Moves to "+STAGES[st.view]+".";}
+  }
+  function targetStage(){var o=opp(st.sel);return st.view===o.stage?Math.min(o.stage+1,4):st.view}
+  function renderAlert(){
+    var a=$("alert"),p=st.pending;
+    if(!p||p.id!==st.sel){a.hidden=true;a.innerHTML="";return}
+    var o=opp(p.id),m=miss(o,p.target);
+    a.hidden=false;
+    if(m.length){
+      a.className="sf-alert err";
+      a.innerHTML='<b>Review the following errors</b><ul>'+m.map(function(it){return '<li>'+esc(it.msg)+'</li>'}).join("")+'</ul>';
+    }else{
+      a.className="sf-alert info";
+      a.innerHTML='<b>All required items are present</b>You can click the stage button again to move to '+esc(STAGES[p.target])+'.';
+    }
+  }
+  function renderKF(){
+    var o=opp(st.sel),i=st.view,items=crit(i),p=st.pending&&st.pending.id===st.sel&&st.pending.target===i,h="";
+    h+='<h3>Key Fields for '+esc(STAGES[i])+'</h3>';
+    var fields=items.filter(function(it){return it.f}),flows=items.filter(function(it){return !it.f});
+    if(!items.length)h+='<p class="sf-note" style="margin:0">No key fields for the entry stage.</p>';
+    h+='<div class="sf-kf">'+fields.map(function(it){
+      var bad=p&&!it.test(o),id="f-"+it.f,v=o[it.f],ctl;
+      var lab='<label for="'+id+'">'+esc(it.label)+' <code>'+esc(it.api)+'</code></label>';
+      if(it.kind==="pick")ctl='<select class="sf-in'+(bad?" bad":"")+'" id="'+id+'" data-f="'+it.f+'">'+SOURCES.map(function(s){return '<option value="'+esc(s)+'"'+(s===v?" selected":"")+'>'+(s||"--None--")+'</option>'}).join("")+'</select>';
+      else if(it.kind==="bool")ctl='<label class="sf-chk"><input type="checkbox" id="'+id+'" data-f="'+it.f+'"'+(v?" checked":"")+'><span>'+(v?"Checked":"Not checked")+'</span></label>';
+      else ctl='<input class="sf-in'+(bad?" bad":"")+'" id="'+id+'" data-f="'+it.f+'" type="'+(it.kind==="num"?"number":it.kind==="date"?"date":"text")+'"'+(it.kind==="num"?' min="0" step="1000"':'')+' value="'+esc(v)+'">';
+      return '<div class="sf-fld">'+(it.kind==="bool"?'<label>'+esc(it.label)+' <code>'+esc(it.api)+'</code></label>':lab)+ctl+(bad?'<div class="sf-msg">Complete this field.</div>':'')+'</div>';
+    }).join("")+'</div>';
+    if(flows.length)h+='<p class="sf-note">'+flows.map(function(it){return esc(it.label)}).join(" and ")+' live on related records. <button class="sf-link" type="button" id="gotoroles">Open Contact Roles</button></p>';
+    h+='<div class="sf-guide"><b>Guidance for Success.</b> '+esc(GUIDE[i])+'</div>';
+    $("kf").innerHTML=h;
+  }
+
+  function tabsDef(){
+    var o=opp(st.sel),fired=st.trace?st.trace.fired.length:0;
+    return [["roles","Contact Roles",o.roles.length],["rule","Validation rule",null],["flow","Flow",null],["why","Why",fired]];
+  }
+  function renderTabs(){
+    $("tabs").innerHTML=tabsDef().map(function(t){return '<button class="sf-tab" type="button" role="tab" id="tab-'+t[0]+'" data-t="'+t[0]+'" aria-selected="'+(st.tab===t[0])+'" aria-controls="panel" tabindex="'+(st.tab===t[0]?0:-1)+'">'+t[1]+(t[2]!==null?'<b>('+t[2]+')</b>':'')+'</button>'}).join("");
+  }
+  function ruleText(i,o){
+    var rules=crit(i).filter(function(it){return it.how==="rule"});
+    if(!rules.length)return null;
+    var L=[{t:"AND("},{t:"  OR(ISNEW(), ISCHANGED(StageName)),"},{t:"  ISPICKVAL(StageName, \""+STAGES[i]+"\"),"},{t:"  NOT($Permission.Bypass_Stage_Checks),"},{t:"  OR("}];
+    rules.forEach(function(it,j){L.push({t:"    "+it.cond+(j<rules.length-1?",":""),hit:!it.test(o)})});
+    L.push({t:"  )"});L.push({t:")"});
+    return {lines:L,msg:STAGES[i]+" exit checklist: "+rules.map(function(it){return it.label.toLowerCase()}).join(", ")+"."};
+  }
+  function renderPanel(){
+    var o=opp(st.sel),i=st.view,h="",t=st.tab;
+    if(t==="roles"){
+      h+='<table class="sf-rl"><thead><tr><th>Contact</th><th>Role</th><th>Primary</th><th><span class="sr" style="position:absolute;left:-9999px">Remove</span></th></tr></thead><tbody>'+
+        (o.roles.length?o.roles.map(function(r,k){return '<tr><td>'+esc(r.n)+'</td><td>'+esc(r.r)+'</td><td>'+(r.p?"Yes":"No")+'</td><td><button class="sf-link" type="button" data-rm="'+k+'" aria-label="Remove '+esc(r.n)+'">Remove</button></td></tr>'}).join(""):'<tr><td colspan="4" class="sf-note">No contact roles. Add one below.</td></tr>')+'</tbody></table>'+
+        '<div class="sf-add"><label for="rrole" class="sf-note" style="margin:0">Role</label><select class="sf-in" id="rrole" style="width:auto"><option>Decision Maker</option><option>Evaluator</option><option>Influencer</option></select>'+
+        '<label class="sf-chk"><input type="checkbox" id="rprim"><span>Primary</span></label><button class="sf-btn" type="button" id="radd">Add contact role</button></div>'+
+        '<p class="sf-note">Contact names are fictional. A role entry is a row in the related list, so a Flow reads it and a validation rule cannot.</p>';
+    }else if(t==="rule"){
+      var rt=ruleText(i,o);
+      h+='<p class="sf-crumb">Setup &gt; Object Manager &gt; Opportunity &gt; Validation Rules</p>';
+      if(!rt){h+='<p class="sf-note" style="margin:0">'+esc(STAGES[i])+(i===0?' is the entry stage. No exit rule applies.':' has no field based items, so no validation rule is needed. The Flow covers it.')+'</p>';}
+      else{
+        h+='<div class="sf-meta"><span>Rule Name: <code>'+ruleName(i)+'</code></span><label class="sf-chk" style="padding:0"><input type="checkbox" id="active"'+(st.active?" checked":"")+'><span>Active</span></label></div>';
+        var lines=rt.lines.slice();lines.push({t:""});lines.push({t:"Error Message: "+rt.msg});lines.push({t:"Error Location: Top of Page"});
+        h+='<pre class="sf-code" id="code" tabindex="0" aria-label="Validation rule formula">'+lines.map(function(l){return '<span class="l'+(l.hit?" hit":"")+'">'+esc(l.t||" ")+'</span>'}).join("")+'</pre>';
+        h+='<p class="sf-note">Evaluated against '+esc(o.name)+' entering '+esc(STAGES[i])+'. Highlighted conditions are the ones that fire now. TODAY() is fixed at '+TODAY+' in this demo. The custom fields and the bypass permission are illustrative until you create them.</p>';
+        h+='<button class="sf-btn" type="button" id="copy" data-text="'+esc(lines.map(function(l){return l.t}).join("\n"))+'">Copy formula</button>';
+      }
+    }else if(t==="flow"){
+      var fl=crit(i).filter(function(it){return it.how==="flow"});
+      h+='<p class="sf-crumb">Setup &gt; Flows &gt; Opportunity stage exit checks (record-triggered)</p>';
+      if(!fl.length)h+='<p class="sf-note" style="margin:0">'+(i===0?'Qualification is the entry stage. No exit check applies.':'Every item for '+esc(STAGES[i])+' is a field on the opportunity, so the validation rule is enough and no Flow is needed.')+'</p>';
+      else{
+        h+='<ol class="sf-nodes"><li><b>Start</b>Opportunity, a record is updated. Entry: StageName Is Changed = true and StageName Equals "'+esc(STAGES[i])+'".</li>';
+        fl.forEach(function(it){
+          var hit=!it.test(o);
+          h+='<li class="'+(hit?"hit":"")+'"><b>Get Records</b>OpportunityContactRole where OpportunityId Equals {!$Record.Id} and '+esc(it.where)+'.</li>'+
+             '<li class="'+(hit?"hit":"")+'"><b>Decision</b>The Get Records result is empty'+(hit?". True for this record.":". False for this record.")+'</li>'+
+             '<li class="'+(hit?"hit":"")+'"><b>Custom Error</b>"'+esc(it.msg)+'"</li>';
+        });
+        h+='</ol><p class="sf-note">Highlighted nodes are the ones that stop the save now. This is a plain description of the elements, not exported Flow metadata.</p>';
+      }
+    }else{
+      var tr=st.trace;
+      if(!tr)h+='<p class="sf-note" style="margin:0">No stage change attempted yet. Choose a stage on the Path and click the stage button.</p>';
+      else{
+        h+='<dl class="sf-trace"><dt>Attempt</dt><dd>'+esc(tr.name)+': '+esc(STAGES[tr.from])+' to '+esc(STAGES[tr.target])+'</dd>'+
+          '<dt>Rule</dt><dd>'+(crit(tr.target).length?'<code>'+ruleName(tr.target)+'</code>, Active: '+(tr.active?"Yes":"No"):'None for '+esc(STAGES[tr.target]))+'</dd>'+
+          '<dt>Not met</dt><dd>'+(tr.fired.length?'<ul>'+tr.fired.map(function(x){return '<li>'+esc(x)+'</li>'}).join("")+'</ul>':'Nothing. Every item was present.')+'</dd>'+
+          '<dt>Result</dt><dd><span class="sf-badge '+(tr.res==="blocked"?"err":tr.res==="gaps"?"warn":"ok")+'">'+(tr.res==="blocked"?"Blocked":tr.res==="gaps"?"Saved with gaps":"Saved")+'</span> '+esc(tr.text)+'</dd></dl>'+
+          '<p class="sf-note">The rule checks the stage being entered, forward or back. Records already sitting in a stage are not checked until their stage changes.</p>';
+      }
+    }
+    $("panel").innerHTML=h;
+  }
+  function toast(msg,kind){
+    var t=$("toast");t.textContent=msg;t.className="sf-toast on "+kind;
+    clearTimeout(st.toastT);st.toastT=setTimeout(function(){t.className="sf-toast"},4200);
+  }
+
+  function refresh(){
+    var ae=document.activeElement,id=ae&&ae.id;
+    renderPills();renderTh();renderList();renderRecordHead();renderAlert();renderTabs();renderPanel();
+    if(id&&["active","rrole","rprim","radd","copy","q"].indexOf(id)>-1){var e=$(id);if(e&&e!==document.activeElement)e.focus()}
+  }
+  function full(){refresh();renderKF()}
+
+  function attempt(){
+    var o=opp(st.sel),tg=targetStage();
+    if(tg===o.stage){toast("This is already the current stage.","info");return}
+    var m=miss(o,tg),from=o.stage;
+    var tr={name:o.name,from:from,target:tg,active:st.active,fired:m.map(function(it){return it.label+" ("+(it.how==="flow"?"Flow":"validation rule")+")"})};
+    if(m.length&&st.active){
+      tr.res="blocked";tr.text="Nothing was saved. The stage stays "+STAGES[from]+".";
+      st.pending={id:o.id,target:tg};st.view=tg;st.trace=tr;
+      toast("We hit a snag: "+m.length+" item"+(m.length===1?"":"s")+" missing for "+STAGES[tg]+".","err");
+    }else{
+      o.stage=tg;st.pending=null;st.view=tg;
+      if(m.length){tr.res="gaps";tr.text="The rule is inactive, so the opportunity moved to "+STAGES[tg]+" with "+m.length+" item"+(m.length===1?"":"s")+" missing. It now counts in that stage.";toast("Saved with "+m.length+" gap"+(m.length===1?"":"s")+". Nothing checked the evidence.","warn")}
+      else{tr.res="saved";tr.text="The opportunity moved to "+STAGES[tg]+".";toast("Opportunity moved to "+STAGES[tg]+".","ok")}
+      st.trace=tr;
+    }
+    full();
+  }
+  function select(id,keepFocus){
+    if(id===st.sel)return;
+    st.sel=id;st.pending=null;var o=opp(id);st.view=Math.min(o.stage+1,4);full();
+    if(keepFocus){var r=$("r-"+id);if(r)r.focus()}
+  }
+
+  $("list").addEventListener("click",function(e){var r=e.target.closest(".sf-row");if(r)select(r.getAttribute("data-id"))});
+  $("list").addEventListener("keydown",function(e){
+    var r=e.target.closest(".sf-row");if(!r)return;
+    var all=[].slice.call($("list").querySelectorAll(".sf-row")),i=all.indexOf(r);
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();select(r.getAttribute("data-id"),true)}
+    else if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();var n=all[i+(e.key==="ArrowDown"?1:-1)];if(n){all.forEach(function(x){x.tabIndex=-1});n.tabIndex=0;n.focus()}}
+  });
+  $("q").addEventListener("input",function(e){st.q=e.target.value;renderList()});
+  $("pills").addEventListener("click",function(e){var b=e.target.closest("button[data-p]");if(!b)return;st.pill=b.getAttribute("data-p");renderPills();renderList()});
+  $("th").addEventListener("click",function(e){
+    var b=e.target.closest("button[data-c]");if(!b)return;
+    var c=b.getAttribute("data-c"),s=st.sort;
+    if(s.col!==c){s.col=c;s.dir="asc"}else if(s.dir==="asc")s.dir="desc";else{s.col=null;s.dir=null}
+    renderTh();renderList();
+    var nb=$("th").querySelector('button[data-c="'+c+'"]');if(nb)nb.focus();
+  });
+  $("path").addEventListener("click",function(e){var b=e.target.closest("button[data-s]");if(!b)return;st.view=+b.getAttribute("data-s");renderRecordHead();renderAlert();renderTabs();renderPanel();renderKF();var nb=$("path").querySelector('button[data-s="'+st.view+'"]');if(nb)nb.focus()});
+  $("mark").addEventListener("click",attempt);
+  $("kf").addEventListener("input",function(e){
+    var f=e.target.getAttribute("data-f");if(!f)return;
+    var o=opp(st.sel);
+    o[f]=e.target.type==="checkbox"?e.target.checked:(e.target.type==="number"?(e.target.value===""?"":Number(e.target.value)):e.target.value);
+    if(e.target.type==="checkbox"){var s=e.target.parentNode.querySelector("span");if(s)s.textContent=e.target.checked?"Checked":"Not checked"}
+    var bad=e.target.classList.contains("bad"),it=crit(st.view).filter(function(x){return x.f===f})[0];
+    if(bad&&it&&it.test(o)){e.target.classList.remove("bad");var m=e.target.parentNode.querySelector(".sf-msg");if(m)m.remove()}
+    refresh();
+  });
+  $("kf").addEventListener("click",function(e){if(e.target.id==="gotoroles"){st.tab="roles";renderTabs();renderPanel();$("tab-roles").focus()}});
+  $("tabs").addEventListener("click",function(e){var b=e.target.closest("button[data-t]");if(!b)return;st.tab=b.getAttribute("data-t");renderTabs();renderPanel()});
+  $("tabs").addEventListener("keydown",function(e){
+    if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")return;
+    var ids=tabsDef().map(function(t){return t[0]}),i=ids.indexOf(st.tab);
+    i=(i+(e.key==="ArrowRight"?1:ids.length-1))%ids.length;st.tab=ids[i];renderTabs();renderPanel();$("tab-"+st.tab).focus();
+  });
+  $("panel").addEventListener("click",function(e){
+    var t=e.target;
+    if(t.id==="radd"){
+      var o=opp(st.sel),p=$("rprim").checked,r=$("rrole").value;
+      var used=o.roles.map(function(x){return x.n});
+      var name=POOL.filter(function(n){return used.indexOf(n)<0})[0]||POOL[o.roles.length%POOL.length];
+      if(p)o.roles.forEach(function(x){x.p=false});
+      o.roles.push({n:name,r:r,p:p});
+      toast("Added "+name+" as "+r+(p?" (primary).":"."),"info");
+      refresh();
+    }else if(t.getAttribute&&t.getAttribute("data-rm")!==null){
+      var o2=opp(st.sel),k=+t.getAttribute("data-rm"),rm=o2.roles.splice(k,1)[0];
+      toast("Removed "+rm.n+".","info");refresh();
+    }else if(t.id==="copy"){
+      var txt=t.getAttribute("data-text")||"";
+      function done(ok){toast(ok?"Formula copied.":"Copy is not available here. Select the text and copy it.",ok?"ok":"info")}
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){done(true)},function(){done(false)});
+        else{var ta=document.createElement("textarea");ta.value=txt;document.body.appendChild(ta);ta.select();var ok=document.execCommand("copy");ta.remove();done(ok)}
+      }catch(err){done(false)}
+    }
+  });
+  $("panel").addEventListener("change",function(e){if(e.target.id==="active"){st.active=e.target.checked;toast(st.active?"Validation rule activated.":"Validation rule deactivated. Stage changes are no longer checked.",st.active?"ok":"warn");refresh()}});
+  $("reset").addEventListener("click",function(){
+    clearTimeout(st.toastT);st=fresh();$("q").value="";$("toast").className="sf-toast";full();
+  });
+  st=fresh();full();
+})();
+</script>
+</body>
+</html>

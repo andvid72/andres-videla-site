@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Revenue Cloud: Implementation Sequence Planner | Andres Videla</title>
+<meta name="description" content="An interactive reference sequence for a Revenue Cloud implementation or a CPQ migration, from discovery to hypercare, with dependencies, deliverables and exit gates, each tagged as documented or delivery practice.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://andres-videla.com/demo/revenue-cloud-implementation-sequence/">
+<link rel="canonical" href="https://andres-videla.com/demo/revenue-cloud-implementation-sequence/">
+<meta property="og:title" content="Salesforce Revenue Cloud: Implementation Sequence Planner">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Choose a starting point, scope and complexity drivers, and get a six-phase sequence with dependencies, deliverables and exit gates.">
+<meta property="og:image" content="https://andres-videla.com/assets/revenue-cloud-implementation-sequence-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+h3{font-size:16px;margin:0 0 4px}
+.lede{color:var(--muted);max-width:780px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.6fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+button{font:inherit;cursor:pointer;color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.grp{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.grp.first{margin-top:0;padding-top:0;border-top:0}
+.grp>b{display:block;font-size:14px;margin-bottom:2px}
+.grp>small{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+.tog{display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer}
+.tog input{margin-top:3px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tog span{font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:12.5px;line-height:1.4}
+.tog.off{opacity:.45;cursor:not-allowed}
+.sum{font-size:15px;margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);min-width:0}
+.kpi .n{font-size:21px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.ok .n{color:var(--ok)}
+.path{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 16px;padding:0;list-style:none}
+.path li{font-size:13px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 10px}
+.path li.sep{border:0;background:none;padding:0;color:var(--muted)}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.btn{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);height:36px;line-height:1;padding:0 12px;border-radius:8px;font-size:14px;font-weight:600}
+.btn.alt{border-color:var(--line);background:var(--surface);color:var(--ink);font-weight:400}
+details.ph{border:1px solid var(--line);border-radius:10px;background:var(--bg);margin-bottom:10px}
+details.ph>summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:15px;list-style:none;display:flex;gap:10px;align-items:center;justify-content:space-between}
+details.ph>summary::-webkit-details-marker{display:none}
+details.ph>summary .pc{font-size:12px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+details.ph>summary .pn{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);align-items:center;justify-content:center;font-size:12px;margin-right:8px;flex:none}
+details.ph[open]>summary{border-bottom:1px solid var(--line)}
+.steps{list-style:none;margin:0;padding:6px 12px 12px}
+.step{border-bottom:1px solid var(--line);padding:10px 0}
+.step:last-child{border-bottom:0}
+.step label{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.step input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.step b{font-size:14px}
+.step .d{display:block;font-size:13px;color:var(--muted);margin:2px 0 4px}
+.step .m{display:block;font-size:12.5px;color:var(--muted);margin:2px 0}
+.step .m i{font-style:normal;font-weight:600;color:var(--ink)}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;border-radius:6px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.tag.doc{background:var(--ok-soft);color:var(--ok)} .tag.prac{background:var(--accent-soft);color:var(--accent)} .tag.add{background:var(--warn-soft);color:var(--warn)}
+.srcs a{font-size:12px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.on{opacity:1}
+.real{margin-top:28px}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.rgrid>div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--surface);font-size:14px}
+.rgrid b{display:block;margin-bottom:6px}
+.rgrid ul{margin:0;padding-left:18px;color:var(--muted)}
+.rgrid li{margin-bottom:4px}
+.rnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.rnote a{color:var(--accent)}
+footer{margin-top:32px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce Revenue Cloud: Implementation Sequence Planner</h1>
+  <p class="lede">Most failed revenue implementations do not fail on a feature. They fail on order: pricing designed before the catalog, data loaded before pricing, orchestration built before the integrations it calls. Pick a starting point, scope and complexity drivers, and get a six-phase sequence with dependencies, deliverables and exit gates.</p>
+  <div class="notice">This planner uses no customer data. It assembles public Salesforce documentation and delivery practice into a sequence. Steps tagged Documented come from the pages listed in the references. Steps tagged Practice are delivery recommendations, not vendor requirements. The product is now documented as Revenue Management, formerly Revenue Cloud, and names change between releases.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-c">
+        <h2 id="t-c">Starting point and scope</h2>
+        <div class="grp first">
+          <b>Starting point</b>
+          <div class="chips" role="group" aria-label="Starting point">
+            <button class="chip" data-m="new" aria-pressed="true">New implementation</button>
+            <button class="chip" data-m="mig" aria-pressed="false">Migration from Salesforce CPQ</button>
+          </div>
+        </div>
+        <div class="grp">
+          <b>Scope</b>
+          <small>Quote and pricing are always in scope.</small>
+          <label class="tog"><input type="checkbox" id="orch"><span>Order orchestration<small>Decompose orders and run fulfillment plans.</small></span></label>
+          <label class="tog"><input type="checkbox" id="bill"><span>Billing and revenue handoff<small>Invoicing and the finance interface.</small></span></label>
+          <label class="tog" id="coexl"><input type="checkbox" id="coex"><span>Coexist with CPQ during transition<small>Migration only: run both side by side.</small></span></label>
+        </div>
+        <div class="grp">
+          <b>Complexity drivers</b>
+          <small>Each one adds work to the sequence.</small>
+          <label class="tog"><input type="checkbox" id="vol"><span>High data volumes</span></label>
+          <label class="tog"><input type="checkbox" id="cust"><span>Custom pricing or product structures</span></label>
+          <label class="tog"><input type="checkbox" id="multi"><span>Multiple legacy systems</span></label>
+          <label class="tog"><input type="checkbox" id="integ"><span>Extensive integrations</span></label>
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-r">
+        <h2 id="t-r">Your sequence</h2>
+        <p class="sum" id="sum" aria-live="polite"></p>
+        <div class="kpis" id="kpis"></div>
+        <h2>Order of the main workstreams</h2>
+        <ol class="path" id="path" aria-label="Order of the main workstreams"></ol>
+        <div class="acts">
+          <button class="btn" id="b-copy" type="button">Copy as checklist</button>
+          <button class="btn alt" id="b-dl" type="button">Download checklist</button>
+          <button class="btn alt" id="b-open" type="button">Expand all</button>
+          <button class="btn alt" id="b-close" type="button">Collapse all</button>
+        </div>
+        <div id="phases"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="real" aria-labelledby="t-real">
+    <h2 id="t-real">In a real environment</h2>
+    <div class="rgrid">
+      <div><b>Data sources</b><ul>
+        <li>The target org: installed packages, licenses, editions and the existing configuration.</li>
+        <li>For a migration, the CPQ configuration and data, read through metadata and API queries, plus any legacy exports.</li>
+        <li>Catalog, pricing and contract rules from the business owners, captured as written requirements.</li>
+        <li>Integration specifications for every system that will be called or will call in.</li>
+      </ul></div>
+      <div><b>Limits and prerequisites</b><ul>
+        <li>Documentation describes no deployment tool specific to Revenue Management, so plan the deployment approach yourself.</li>
+        <li>Orchestration callouts have a maximum payload of 12 MB and a default timeout of 5 seconds, up to 120 seconds.</li>
+        <li>The submit order action requires API version 61.0 or later.</li>
+        <li>Licenses, packages and sandbox availability: confirm in the target org.</li>
+      </ul></div>
+      <div><b>How it would be validated</b><ul>
+        <li>Reconcile counts and amounts between the legacy system and the new one for a labeled sample.</li>
+        <li>Replay a sample of historical quotes and compare net prices line by line.</li>
+        <li>Rehearse the full deployment in a staging org before cutover.</li>
+        <li>Test failure paths: timeouts, failed steps and rejected records.</li>
+      </ul></div>
+    </div>
+    <p class="rnote">What this demo does not claim: durations, staffing, cost, success rates or readiness scores. It is a planning aid built from public documentation and delivery practice, and it does not replace a discovery of the actual org.</p>
+    <p class="rnote" id="refs">References: <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=ind.rev_data_migration.htm&amp;type=5">Migrate to Revenue Management</a>, <a href="https://help.salesforce.com/s/articleView?language=en_US&amp;id=ind.rev_migration_revenue_differences_from_cpq.htm&amp;type=5">Key differences from Salesforce CPQ</a>, <a href="https://www.salesforce.com/sales/cpq/end-of-life/">CPQ end of sale</a>, <a href="https://developer.salesforce.com/docs/revenue/revenue-management/guide/deployment-workflows-and-sequence.html">Deployment workflows and sequence</a>, <a href="https://help.salesforce.com/s/articleView?id=ind.dro_dynamic_revenue_orchestrator.htm&amp;language=en_US&amp;type=5">Order orchestration</a>, <a href="https://developer.salesforce.com/docs/revenue/revenue-management/guide/dynamic-revenue-orchestrator-default-order-fulfillment-provider.html">Standard fulfillment provider</a>, <a href="https://developer.salesforce.com/docs/revenue/revenue-management/guide/actions-obj-submit-order.html">Submit order action</a>, <a href="https://trailhead.salesforce.com/content/learn/modules/revenue-cloud-design/set-up-your-product-offerings">Trailhead: set up your product offerings</a>. Check current vendor documentation before relying on any figure.</p>
+  </section>
+
+  <footer>Salesforce, Revenue Cloud, CPQ and Trailhead are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by Salesforce.</footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var REF={
+    mig:["Migrate to Revenue Management","https://help.salesforce.com/s/articleView?language=en_US&id=ind.rev_data_migration.htm&type=5"],
+    diff:["Key differences from Salesforce CPQ","https://help.salesforce.com/s/articleView?language=en_US&id=ind.rev_migration_revenue_differences_from_cpq.htm&type=5"],
+    eos:["CPQ end of sale","https://www.salesforce.com/sales/cpq/end-of-life/"],
+    dep:["Deployment workflows and sequence","https://developer.salesforce.com/docs/revenue/revenue-management/guide/deployment-workflows-and-sequence.html"],
+    dro:["Order orchestration","https://help.salesforce.com/s/articleView?id=ind.dro_dynamic_revenue_orchestrator.htm&language=en_US&type=5"],
+    sfp:["Standard fulfillment provider","https://developer.salesforce.com/docs/revenue/revenue-management/guide/dynamic-revenue-orchestrator-default-order-fulfillment-provider.html"],
+    sub:["Submit order action","https://developer.salesforce.com/docs/revenue/revenue-management/guide/actions-obj-submit-order.html"],
+    tr:["Trailhead: product offerings","https://trailhead.salesforce.com/content/learn/modules/revenue-cloud-design/set-up-your-product-offerings"]
+  };
+  var PH=["Discover","Design","Build the foundation","Load and connect","Validate and cut over","Hypercare"];
+  // k: doc or prac. c: condition key(s). add: label shown when added by a driver.
+  var S=[
+    {p:0,t:"Frame the decision: redesign, not lift",d:"Salesforce guidance treats a move from CPQ as a redesign, because the data model, configuration approach and capabilities differ.",a:"One-page scope and principles",g:"Sponsors agree the program is a redesign with a defined scope.",k:"doc",src:["diff","mig"],c:"mig"},
+    {p:0,t:"Confirm licenses, packages and the commercial status of CPQ",d:"CPQ is in end of sale for new customers, with no forced migration and no announced end of life. Existing customers can renew and keep support.",a:"Current-state inventory of licenses and installed packages",g:"Licenses and packages are verified in the target org, not assumed.",k:"doc",src:["eos"],c:"mig"},
+    {p:0,t:"Verify licenses, edition and sandboxes for the target org",d:"Confirm what is provisioned before designing against it.",a:"Environment and entitlement checklist",g:"Required licenses and sandboxes are confirmed in the target org.",k:"prac",src:[],c:"new"},
+    {p:0,t:"Inventory CPQ configuration, data and reports",d:"List price rules, product rules, bundles, discount schedules, templates, custom code, integrations and reports.",a:"Configuration and report inventory",g:"Every item has an owner and a decision: rebuild, replace or retire.",k:"prac",src:[],c:"mig"},
+    {p:0,t:"Define the commercial model in scope",d:"Products, bundles, pricing models, amendments and renewals, orders, billing and fulfillment, written as requirements with business owners.",a:"Commercial model requirements",g:"Each scope item has a named business owner and a sample of real scenarios.",k:"prac",src:[],c:"all"},
+    {p:0,t:"Plan the data loading approach",d:"Salesforce points to Data Loader for smaller or simpler datasets, Bulk API for large imports, and third-party tools for complex transformations.",a:"Data loading approach and tool choice",g:"Volumes are measured in the source and the tool choice is justified.",k:"doc",src:["mig"],c:"vol",add:"High data volumes"},
+    {p:0,t:"Catalog the custom pricing and product logic",d:"Write down every non-standard rule and where it will live in the new design, or whether it should be retired.",a:"Custom logic register",g:"No custom rule is unowned or undocumented.",k:"prac",src:[],c:"cust",add:"Custom pricing or product structures"},
+    {p:0,t:"Choose one key per customer and product across sources",d:"Define the identifiers that will join every legacy source to the new model before any mapping starts.",a:"Cross-source key definition",g:"Each legacy source maps to a single customer key and a single product key.",k:"prac",src:[],c:"multi",add:"Multiple legacy systems"},
+    {p:0,t:"Inventory integrations and their contracts",d:"For each system that sends or receives data (ERP, tax, contracts, billing), list direction, payload, volume and failure behavior.",a:"Integration inventory",g:"Every integration has an owner and a documented contract.",k:"prac",src:[],c:"integ",add:"Extensive integrations"},
+
+    {p:1,t:"Design the product catalog first",d:"Catalog design moves from SKU-based bundles to an attribute-based model that separates commercial products from technical products. Most other capabilities depend on it.",a:"Catalog model: attributes, classifications, bundles, qualification rules",g:"Business owners sign off on the catalog before pricing design starts.",k:"doc",src:["diff","tr"],c:"all"},
+    {p:1,t:"Design pricing as pricing procedures",d:"Pricing moves from browser-side sequential rules to server-side pricing procedures with waterfall-based execution.",a:"Pricing procedure design and decision table list",g:"Every price outcome in the sample scenarios can be traced to a procedure step.",k:"doc",src:["diff"],c:"all"},
+    {p:1,t:"Map each custom pricing rule to a procedure or a decision table",d:"List the gaps where the new model has no direct equivalent and decide how each will be handled.",a:"Rule mapping and gap list",g:"Every gap has a decision and an owner.",k:"prac",src:[],c:"cust",add:"Custom pricing or product structures"},
+    {p:1,t:"Design the quote-to-order flow and approvals",d:"Define who quotes, who approves what, how amendments and renewals behave, and when a quote becomes an order.",a:"Process flow and approval matrix",g:"Flow reviewed against real deal examples.",k:"prac",src:[],c:"all"},
+    {p:1,t:"Design order orchestration",d:"Define a technical product catalog, decomposition rules and fulfillment plans. Steps can be an Auto Task that runs a Flow, a Callout, a Manual Task, a Milestone or a Pause, and a step scope can be once per plan, per bundle or per line item.",a:"Decomposition and fulfillment design",g:"Each product has a fulfillment path and a failure path.",k:"doc",src:["dro"],c:"orch"},
+    {p:1,t:"Design the billing and revenue handoff",d:"Define invoicing cadence, tax handling and the interface to finance, with the finance team.",a:"Billing and finance interface design",g:"Finance agrees the data they will receive and when.",k:"prac",src:[],c:"bill"},
+    {p:1,t:"Specify callout contracts with their limits",d:"For orchestration callouts, the standard fulfillment provider has a 12 MB maximum payload and a default timeout of 5 seconds, up to 120 seconds. A failed request marks the step as fatally failed.",a:"Callout contract per integration",g:"Every callout has a payload bound, a timeout and a failure handler.",k:"doc",src:["sfp"],c:"orch+integ",add:"Extensive integrations"},
+    {p:1,t:"Decide coexistence or cutover by segment",d:"Revenue Cloud can run alongside CPQ and Billing in one org when the managed packages are provisioned and enabled, with the Revenue Cloud Advanced and Billing licenses.",a:"Coexistence plan by customer segment",g:"Each segment has a cutover rule and the packages and licenses are confirmed in the org.",k:"doc",src:["mig"],c:"coex"},
+    {p:1,t:"Define the deployment and environment strategy",d:"The documentation describes no deployment tool specific to Revenue Management. Full deployments suit initial setup and releases to new environments, while incremental ones carry changes since the last successful deployment.",a:"Environment map and deployment runbook",g:"The team can redeploy catalog and pricing to a fresh org from the runbook.",k:"doc",src:["dep"],c:"all"},
+
+    {p:2,t:"Deploy catalog foundations in dependency order",d:"The product specification record type must exist before products are inserted, and parent records must be deployed before their children.",a:"Foundation deployment package",g:"A clean deployment to an empty org succeeds from the runbook.",k:"doc",src:["dep"],c:"all"},
+    {p:2,t:"Build the catalog and its qualification rules",d:"Create attributes, classifications, products and bundles, and rules that qualify or disqualify products or categories.",a:"Configured catalog",g:"Sample scenarios from discovery can be quoted against the catalog.",k:"doc",src:["tr"],c:"all"},
+    {p:2,t:"Deploy decision tables before pricing recipes, then build pricing",d:"Decision tables must be deployed before pricing recipes. Build pricing procedures on top, after the catalog.",a:"Pricing configuration",g:"Pricing for the sample scenarios matches the written expectations.",k:"doc",src:["dep"],c:"all"},
+    {p:2,t:"Build orchestration in order",d:"Create the technical catalog, then decomposition rules, then fulfillment plans, then step definitions and scenarios, then SLA and fallout rules, and finish with the monitoring dashboard.",a:"Orchestration configuration",g:"A test order decomposes and runs through its plan end to end.",k:"doc",src:["dro"],c:"orch"},
+    {p:2,t:"Choose a callout provider type per integration",d:"The supported callout types are the standard fulfillment provider, an Apex type provider and an external services defined provider.",a:"Callout implementations",g:"Each callout passes a happy-path and a timeout test.",k:"doc",src:["sfp"],c:"orch+integ",add:"Extensive integrations"},
+    {p:2,t:"Configure billing and the finance interface",d:"Build what was designed with finance, and agree a sample invoice by hand first.",a:"Billing configuration",g:"A sample invoice matches the hand-calculated expectation.",k:"prac",src:[],c:"bill"},
+    {p:2,t:"Rebuild reports on the new standard objects",d:"Reports built on CPQ objects must be rebuilt, because the data models differ. Plan this early, not at the end.",a:"Rebuilt report set",g:"Business owners confirm each report answers the same question.",k:"doc",src:["mig"],c:"mig"},
+
+    {p:3,t:"Load reference data, then pricing, before transactional data",d:"Salesforce guidance puts the catalog first and pricing before migrating transactional data.",a:"Load plan in dependency order",g:"Reference and pricing data pass validation before any transactional load.",k:"doc",src:["mig"],c:"mig"},
+    {p:3,t:"Migrate transactional data in dependency order",d:"Move contracts, subscriptions or assets, and open quotes and orders in the order their relationships require.",a:"Migration scripts and load logs",g:"Each load is reconciled before the next one starts.",k:"prac",src:[],c:"mig"},
+    {p:3,t:"Run loads with the tool that fits the volume",d:"Use Data Loader for smaller sets and Bulk API for large imports, with a retry-safe design so a rerun cannot duplicate records.",a:"Load runbook with rerun behavior",g:"A deliberate rerun of a load leaves the data unchanged.",k:"doc",src:["mig"],c:"vol",add:"High data volumes"},
+    {p:3,t:"Consolidate sources before loading",d:"Resolve duplicate customers and products across legacy systems using the agreed keys.",a:"Consolidated source datasets",g:"No customer or product appears under two keys.",k:"prac",src:[],c:"multi",add:"Multiple legacy systems"},
+    {p:3,t:"Wire order submission",d:"The submit order action is a REST POST available from API version 61.0. It is asynchronous by default, and a synchronous call returns the fulfillment plan ID.",a:"Order submission integration",g:"Sync and async submissions both produce the expected plan.",k:"doc",src:["sub"],c:"orch"},
+    {p:3,t:"Connect and test each integration end to end",d:"Run each integration with realistic payloads and the agreed contract.",a:"Integration test results",g:"Every integration passes its contract tests in a staging org.",k:"prac",src:[],c:"integ",add:"Extensive integrations"},
+
+    {p:4,t:"Reconcile against the source of truth",d:"Compare counts and amounts between the legacy system and the new one for a labeled sample, and investigate every difference.",a:"Reconciliation report",g:"Every difference is explained or fixed.",k:"prac",src:[],c:"mig"},
+    {p:4,t:"Replay historical quotes and compare net prices",d:"Run a sample of past quotes through the new pricing and compare line by line.",a:"Pricing parity report",g:"Every difference is explained as a deliberate change or a defect.",k:"prac",src:[],c:"all"},
+    {p:4,t:"Rehearse the full deployment in staging",d:"Full deployments suit initial setup and new environments, so rehearse the complete one before cutover.",a:"Rehearsal log",g:"The rehearsal completes from the runbook without manual fixes.",k:"doc",src:["dep"],c:"all"},
+    {p:4,t:"Test the failure paths",d:"Force timeouts and failed steps and confirm the step state, the alerting and the recovery.",a:"Failure-path test results",g:"Each failure has an owner and a documented recovery.",k:"doc",src:["sfp"],c:"orch"},
+    {p:4,t:"Freeze CPQ changes for migrated segments",d:"Stop configuration changes in the old system for segments that are moving, and keep a rollback decision point.",a:"Freeze calendar and rollback criteria",g:"Go or no-go criteria are written and agreed in advance.",k:"prac",src:[],c:"coex"},
+    {p:4,t:"Agree the cutover plan and the rollback decision point",d:"Sequence the cutover steps, assign owners and define what would trigger a rollback.",a:"Cutover plan",g:"Business and technical owners both sign the plan.",k:"prac",src:[],c:"all"},
+
+    {p:5,t:"Monitor orchestration in the fulfillment dashboard",d:"Watch plan and step states, SLA breaches and fallout from the orchestration dashboard.",a:"Monitoring routine",g:"An owner reviews fallout every working day.",k:"doc",src:["dro"],c:"orch"},
+    {p:5,t:"Triage exceptions by cause, not by record",d:"Group failures into root causes and rank the work by value per hour. See the invoice run triage demo for the method.",a:"Exception taxonomy and queue",g:"New failure types are classified within one cycle.",k:"prac",src:[],c:"all"},
+    {p:5,t:"Release changes with incremental deployments",d:"After go-live, ship catalog and pricing changes as incremental deployments that carry changes since the last successful one.",a:"Release routine",g:"A catalog change reaches production through the runbook.",k:"doc",src:["dep"],c:"all"},
+    {p:5,t:"Hand over runbooks, owners and a backlog",d:"Close with documented runbooks, named owners for catalog, pricing and integrations, and a prioritized backlog.",a:"Handover pack",g:"Operations can run a release and a recovery without the build team.",k:"prac",src:[],c:"all"}
+  ];
+  var state={m:"new"};
+  function on(c,s){
+    if(c==="all") return true;
+    if(c==="mig") return s.m==="mig";
+    if(c==="new") return s.m==="new";
+    if(c==="coex") return s.m==="mig"&&s.coex;
+    if(c==="orch+integ") return s.orch&&s.integ;
+    return !!s[c];
+  }
+  var done={};
+  function read(){return {m:state.m,orch:$("orch").checked,bill:$("bill").checked,coex:$("coex").checked&&state.m==="mig",vol:$("vol").checked,cust:$("cust").checked,multi:$("multi").checked,integ:$("integ").checked}}
+  function visible(s){return S.map(function(x,i){x.i=i;return x}).filter(function(x){return on(x.c,s)})}
+  function toast(m){var t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(function(){t.classList.remove("on")},1800)}
+
+  function render(){
+    var s=read(), vs=visible(s);
+    $("coex").disabled=state.m!=="mig"; $("coexl").className="tog"+(state.m!=="mig"?" off":"");
+    var openState={}; document.querySelectorAll("details.ph").forEach(function(d){openState[d.dataset.p]=d.open});
+    var nd=vs.filter(function(x){return x.k==="doc"}).length, na=vs.filter(function(x){return x.add}).length, nc=vs.filter(function(x){return done[x.i]}).length;
+    $("sum").textContent=vs.length+" steps across 6 phases. "+nd+" are tied to Salesforce documentation and "+(vs.length-nd)+" are delivery practice. "+na+" were added by the drivers you selected. You have marked "+nc+" as cleared.";
+    $("kpis").innerHTML='<div class="kpi"><div class="n">'+vs.length+'</div><div class="l">Steps and gates</div></div><div class="kpi"><div class="n">'+nd+'</div><div class="l">Documented</div></div><div class="kpi"><div class="n">'+na+'</div><div class="l">Added by drivers</div></div><div class="kpi '+(nc===vs.length&&vs.length?"ok":"")+'"><div class="n">'+nc+' / '+vs.length+'</div><div class="l">Gates cleared by you</div></div>';
+    var path=["Catalog","Pricing"]; if(s.m==="mig") path.push("Data and reports"); path.push("Quote to order"); if(s.orch) path.push("Orchestration"); if(s.bill) path.push("Billing"); path.push("Cutover");
+    $("path").innerHTML=path.map(function(p,i){return (i?'<li class="sep" aria-hidden="true">then</li>':'')+'<li>'+p+'</li>'}).join("");
+    $("phases").innerHTML=PH.map(function(name,pi){
+      var ps=vs.filter(function(x){return x.p===pi}), c=ps.filter(function(x){return done[x.i]}).length;
+      var open=openState[pi]!==undefined?openState[pi]:pi===0;
+      return '<details class="ph" data-p="'+pi+'"'+(open?" open":"")+'><summary><span><span class="pn">'+(pi+1)+'</span>'+name+'</span><span class="pc">'+c+' / '+ps.length+'</span></summary><ul class="steps">'+ps.map(function(x){
+        var links=x.src.map(function(k){return '<a href="'+REF[k][1]+'">'+REF[k][0]+'</a>'}).join(", ");
+        return '<li class="step"><label><input type="checkbox" data-i="'+x.i+'"'+(done[x.i]?" checked":"")+'><span><b>'+x.t+'</b><span class="tag '+(x.k==="doc"?"doc":"prac")+'">'+(x.k==="doc"?"Documented":"Practice")+'</span>'+(x.add?'<span class="tag add">Added: '+x.add+'</span>':"")+'<span class="d">'+x.d+'</span><span class="m"><i>Deliverable:</i> '+x.a+'</span><span class="m"><i>Exit gate:</i> '+x.g+'</span>'+(links?'<span class="m srcs"><i>Source:</i> '+links+'</span>':"")+'</span></label></li>';
+      }).join("")+'</ul></details>';
+    }).join("");
+    document.querySelectorAll('.step input').forEach(function(b){b.addEventListener("change",function(){done[+b.dataset.i]=b.checked;var f=b.dataset.i;render();var nb=document.querySelector('.step input[data-i="'+f+'"]');if(nb)nb.focus()})});
+  }
+  function md(){
+    var s=read(), vs=visible(s), out=["# Revenue Cloud implementation sequence","","Starting point: "+(s.m==="mig"?"migration from Salesforce CPQ":"new implementation"),""];
+    PH.forEach(function(name,pi){var ps=vs.filter(function(x){return x.p===pi}); out.push("## "+(pi+1)+". "+name,""); ps.forEach(function(x){out.push("- ["+(done[x.i]?"x":" ")+"] "+x.t+" ("+(x.k==="doc"?"documented":"practice")+")","  - Deliverable: "+x.a,"  - Exit gate: "+x.g)}); out.push("")});
+    out.push("Generated from a reference sequence. Confirm every item in your own org and in current Salesforce documentation.");
+    return out.join("\n");
+  }
+  document.querySelectorAll(".chip").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")});b.setAttribute("aria-pressed","true");state.m=b.dataset.m;render()})});
+  ["orch","bill","coex","vol","cust","multi","integ"].forEach(function(id){$(id).addEventListener("change",render)});
+  $("b-open").addEventListener("click",function(){document.querySelectorAll("details.ph").forEach(function(d){d.open=true})});
+  $("b-close").addEventListener("click",function(){document.querySelectorAll("details.ph").forEach(function(d){d.open=false})});
+  $("b-copy").addEventListener("click",function(){
+    var t=md();
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast("Checklist copied")},function(){toast("Copy is not available here, use Download")}); return} }catch(e){}
+    toast("Copy is not available here, use Download");
+  });
+  $("b-dl").addEventListener("click",function(){
+    try{var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([md()],{type:"text/markdown"}));a.download="revenue-cloud-implementation-checklist.md";document.body.appendChild(a);a.click();a.remove();toast("Checklist downloaded")}catch(e){toast("Download is not available here")}
+  });
+  render();
+})();
+</script>
+</body>
+</html>

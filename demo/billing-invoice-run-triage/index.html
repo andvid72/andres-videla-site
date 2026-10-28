@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce Billing: Invoice Run Triage Demo | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative triage queue for a partially failed invoice run: classify raw exception messages with editable rules, group them by root cause, and rank the work by value per hour against the billing cut-off.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Salesforce Billing: Invoice Run Triage Demo">
+<meta property="og:url" content="https://andres-videla.com/demo/billing-invoice-run-triage/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Edit the classification rules for a fictional exception log and watch grouping, effort and the billing cut-off respond.">
+<meta property="og:image" content="https://andres-videla.com/assets/billing-invoice-run-triage-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+  --c1:#2f6fe4; --c2:#7a4fd6; --c3:#c2410c; --c4:#0f766e; --c5:#be185d; --c6:#8a6d00; --cu:#5b6270; --on:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+    --c1:#6b9bff; --c2:#a98bf0; --c3:#fb923c; --c4:#4cd3ab; --c5:#f472b6; --c6:#e5c24a; --cu:#9aa1ae; --on:#101216;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  --c1:#6b9bff; --c2:#a98bf0; --c3:#fb923c; --c4:#4cd3ab; --c5:#f472b6; --c6:#e5c24a; --cu:#9aa1ae; --on:#101216;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,.lgbox:focus-visible,pre:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+h3{font-size:16px;margin:0 0 4px}
+.lede{color:var(--muted);max-width:780px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+button{font:inherit;cursor:pointer;color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.ctl{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.ctl.first{margin-top:0;padding-top:0;border-top:0}
+.ctl label{display:block;font-size:14px;font-weight:600}
+.ctl label output{float:right;font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+.tog{display:flex;gap:10px;align-items:flex-start;padding:12px 0 0;margin-top:12px;border-top:1px solid var(--line);cursor:pointer}
+.tog input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tog b{display:block;font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:13px;line-height:1.4}
+select,input[type=text],input[type=number]{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%;min-width:0}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input:disabled{opacity:.45}
+.sum{font-size:15px;margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;margin-bottom:14px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);min-width:0}
+.kpi .n{font-size:21px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.ok .n{color:var(--ok)} .kpi.warn .n{color:var(--warn)} .kpi.bad .n{color:var(--bad)}
+.chartbox{border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--line);stroke-width:1}
+.tx{fill:var(--muted);font-size:11px;font-family:inherit}
+.lane{fill:var(--surface);stroke:var(--line)}
+.bt{fill:var(--on);font-size:11px;font-weight:700;font-family:inherit}
+.cut{stroke:var(--bad);stroke-width:2;stroke-dasharray:5 3}
+.cutt{fill:var(--bad);font-size:11px;font-weight:600;font-family:inherit}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.rule{border-top:1px solid var(--line);padding:10px 0}
+.rule:first-of-type{border-top:0;padding-top:0}
+.rule .top{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.rule .top input{width:18px;height:18px;accent-color:var(--accent);flex:none}
+.rule .top b{font-size:14px;min-width:0}
+.rule .sw{width:14px;height:14px;border-radius:4px;flex:none}
+.rule .kw{margin-bottom:6px}
+.rule .nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rule .nums label{font-size:12px;color:var(--muted);display:block}
+.rule .hit{font-size:12px;color:var(--muted);margin-top:4px}
+.lgbox{border:1px solid var(--line);border-radius:10px;max-height:300px;overflow:auto;background:var(--bg);margin-top:14px}
+.lg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:7px 10px;border-bottom:1px solid var(--line);font-size:13px}
+.lg:last-child{border-bottom:0}
+.lg .m{overflow-wrap:anywhere}
+.lg .am{font-variant-numeric:tabular-nums;color:var(--muted)}
+.lg .ch{grid-column:1 / -1}
+.chp{display:inline-block;font-size:12px;font-weight:600;border-radius:6px;padding:1px 8px;color:var(--on)}
+.chp.u{background:var(--bad-soft);color:var(--bad)}
+.cls{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.cls li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);font-size:13px}
+.cls .sw2{width:26px;height:26px;border-radius:6px;color:var(--on);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:12px}
+.cls b{display:block;font-size:14px}
+.cls small{color:var(--muted)}
+.st{font-size:12px;border-radius:6px;padding:2px 8px;font-weight:600;white-space:nowrap}
+.st.ok{background:var(--ok-soft);color:var(--ok)} .st.bad{background:var(--bad-soft);color:var(--bad)} .st.warn{background:var(--warn-soft);color:var(--warn)}
+@media (max-width:520px){.cls li{grid-template-columns:auto minmax(0,1fr)} .cls .st{grid-column:2;justify-self:start}}
+.section{margin-top:28px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cols .card p{margin:0;color:var(--muted);font-size:14px}
+.cols .card h3{margin-bottom:6px}
+.runs p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.runs h3{margin-top:14px}
+pre{margin:8px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);overflow-x:auto;max-width:100%;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink)}
+.impact{max-width:780px}
+.impact p{margin:0 0 10px;color:var(--muted)}
+footer{margin-top:32px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce Billing: Invoice Run Triage Demo</h1>
+  <p class="lede">An invoice run leaves sixteen lines in an exception list a few hours before the billing cut-off. The list looks like sixteen problems, but the raw messages hide a handful of root causes. Write classification rules, group the failures and rank the work by value per hour, then see how much revenue clears in time.</p>
+  <div class="notice">Fictional exception log and placeholder effort hours. The messages are invented, and real ones differ by org and Billing version. Hours are inputs you set, not facts about any fix. The deliverable here is the method: a rule-based classifier feeding a prioritized queue, built from your own error log and your own team's history. Nothing is connected to a real org.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-c">
+        <h2 id="t-c">Triage plan</h2>
+        <div class="chips" role="group" aria-label="Scenario">
+          <button class="chip" data-p="line" aria-pressed="true">Line by line</button>
+          <button class="chip" data-p="group" aria-pressed="false">Group by cause</button>
+          <button class="chip" data-p="prio" aria-pressed="false">Group and prioritize</button>
+          <button class="chip" data-p="team" aria-pressed="false">Add a second fixer</button>
+          <button class="chip" data-p="full" aria-pressed="false">Classify every failure</button>
+        </div>
+        <div class="ctl first">
+          <label for="ord">Order of work</label>
+          <small>Which item the next free person picks up.</small>
+          <select id="ord">
+            <option value="arr">Arrival order in the exception list</option>
+            <option value="val">Largest value first</option>
+            <option value="vph">Highest value per hour of effort</option>
+          </select>
+        </div>
+        <label class="tog"><input type="checkbox" id="grp"><span><b>Group by classified cause</b><small>Diagnose each cause once and apply the fix to every matching line. Off means each line is worked as a separate case.</small></span></label>
+        <div class="ctl">
+          <label for="fx">People fixing in parallel <output id="o-fx"></output></label>
+          <small>Each person works one item at a time.</small>
+          <input type="range" id="fx" min="1" max="4" step="1" value="1">
+        </div>
+        <div class="ctl">
+          <label for="co">Hours until the billing cut-off <output id="o-co"></output></label>
+          <small>Lines not cleared by then roll into the next cycle.</small>
+          <input type="range" id="co" min="4" max="24" step="1" value="14">
+        </div>
+        <div class="ctl">
+          <label for="rd">Diagnosis repeated per line when not grouped <output id="o-rd"></output></label>
+          <small>How much of the investigation is redone because the common cause was not recognized.</small>
+          <input type="range" id="rd" min="0" max="100" step="10" value="60">
+        </div>
+        <div class="ctl">
+          <label for="un">Hours per unclassified line</label>
+          <small>Each line no rule matches is its own investigation.</small>
+          <input type="number" id="un" min="0" max="24" step="0.5" value="2">
+        </div>
+      </section>
+      <section class="card" aria-labelledby="t-rules">
+        <h2 id="t-rules">Classification rules</h2>
+        <p style="margin:0 0 10px;font-size:13px;color:var(--muted)">A line gets the first enabled rule whose keyword appears in its message. Edit keywords and hours, placeholders you would replace with your team's history.</p>
+        <div id="rules"></div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-r">
+        <h2 id="t-r">Exception queue, scheduled</h2>
+        <p class="sum" id="sum" aria-live="polite"></p>
+        <div class="kpis" id="kpis"></div>
+        <div class="chartbox">
+          <svg id="chart" viewBox="0 0 560 220" role="img" aria-labelledby="ch-t ch-d"><title id="ch-t">Schedule of fixes against the billing cut-off</title><desc id="ch-d">Each lane is one person. Bars are items of work coloured by cause. A dashed vertical line marks the billing cut-off.</desc><g id="chart-g"></g></svg>
+          <div class="legend" id="legend"></div>
+        </div>
+        <ul class="cls" id="cls"></ul>
+        <h2 style="margin-top:16px">Raw exception log</h2>
+        <div class="lgbox" id="lgbox" tabindex="0" role="region" aria-label="Raw exception log, scrollable"><div id="log"></div></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="section runs" aria-labelledby="t-run">
+    <h2 id="t-run">Run it in your own org</h2>
+    <div class="card">
+      <p>The pieces below are what a real version needs. They are read-only until you decide otherwise, and the rules come from your own errors, not from this page.</p>
+      <h3>1. Collect one row per failed line</h3>
+      <p>Take the record Id, the account, the amount and the raw error message from wherever your Billing version records invoice run failures. The object and field names depend on the version and the org, so confirm them in Object Manager before building anything.</p>
+      <pre tabindex="0"><code>line_id, account_id, amount, message
+a1B...01, 001...09, 40000, "&lt;raw error text&gt;"</code></pre>
+      <h3>2. Keep the rules as data, not code</h3>
+      <p>An ordered list of keyword rules is easy to review with finance and to extend when a new message appears. Anything no rule matches stays visible as unclassified, which is the signal to write the next rule.</p>
+      <pre tabindex="0"><code>[
+  { "cause": "Billing rule missing", "contains": "billing rule",
+    "fixOnceHours": 3, "perLineHours": 0, "waitHours": 0 },
+  { "cause": "Period closed", "contains": "period is closed",
+    "fixOnceHours": 2, "perLineHours": 0, "waitHours": 6 }
+]</code></pre>
+      <h3>3. Rank and publish the queue</h3>
+      <p>Group lines by cause, rank causes by value per hour, start the long-lead approvals first, and publish the queue where the team already works, such as a report or a list in the tool they use. Replace the placeholder hours with the median from past runs as soon as you have them.</p>
+      <h3>Before you rely on it</h3>
+      <p>Validate the classifier on a past failed run whose outcome you know, and compare its grouping with what the team actually found. Review unclassified lines every cycle. The hours and cut-off in this page are illustrations, so no outcome here should be quoted as a result.</p>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="t-a">
+    <h2 id="t-a">Architecture applied</h2>
+    <div class="cols">
+      <div class="card"><h3>1. Classify failures into root causes</h3><p>Normalize raw messages into a small, reviewable taxonomy at the moment a line fails, and keep what no rule recognizes visible. The exception list then reads as a handful of causes.</p></div>
+      <div class="card"><h3>2. Order work by value unblocked per hour</h3><p>Rank causes by revenue cleared per hour of effort, and start long-lead items such as approvals first, because their waiting time overlaps with everything else.</p></div>
+      <div class="card"><h3>3. Prevent the recurring classes</h3><p>Run readiness checks before the invoice run for the causes that keep returning, such as missing entity data or an inactive order. Each class the checks catch never reaches the cut-off clock.</p></div>
+    </div>
+  </section>
+
+  <section class="section impact" aria-labelledby="t-i">
+    <h2 id="t-i">Impact</h2>
+    <p>The difference between a calm close and a scramble is rarely effort. It is whether the team sees a few causes or a long list of cases, and whether the approval that takes longest was started first.</p>
+    <p>Over time, the same rules that speed up triage show which causes keep returning, which becomes the input for pre-run checks and for fixing data entry upstream, in the quote and order stages.</p>
+  </section>
+
+  <footer>Salesforce is a trademark of its respective owner. This page is an independent architecture illustration and is not affiliated with or endorsed by it.</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var RULES=[
+    {n:"Billing rule missing on a product",kw:"billing rule",on:1,fx:3,ln:0,wt:0},
+    {n:"Legal entity missing on an account",kw:"legal entity",on:1,fx:1,ln:0.5,wt:0},
+    {n:"Finance period already closed",kw:"period is closed",on:1,fx:2,ln:0,wt:6},
+    {n:"Tax service timeout",kw:"timeout",on:1,fx:1,ln:0,wt:0},
+    {n:"Order not activated",kw:"not activated",on:1,fx:1.5,ln:0.5,wt:0},
+    {n:"Unhandled generation error",kw:"unhandled",on:0,fx:1.5,ln:0.25,wt:0}
+  ];
+  var LOG=[
+    ["Rule check failed: no billing rule on product Tier-A Seats",40],
+    ["Validation failed: legal entity is blank on account Redwood Supply",30],
+    ["Rule check failed: no billing rule on product Tier-A Seats",50],
+    ["Posting blocked: finance period is closed for 2026-09",55],
+    ["Callout timeout while calculating tax",16],
+    ["Validation failed: legal entity is blank on account Redwood Supply",34],
+    ["Rule check failed: no billing rule on product Tier-B Seats",45],
+    ["Order is not activated: ORD-10417",33],
+    ["Rule check failed: no billing rule on product Tier-B Seats",45],
+    ["Callout timeout while calculating tax",20],
+    ["Unhandled error during invoice generation (code 17)",28],
+    ["Posting blocked: finance period is closed for 2026-09",65],
+    ["Validation failed: legal entity is blank on account Marlow Textiles",32],
+    ["Order is not activated: ORD-10432",33],
+    ["Callout timeout while calculating tax",18],
+    ["Unhandled error during invoice generation (code 17)",22]
+  ].map(function(r,i){return {m:r[0],v:r[1],pos:i}});
+  var TOTV=LOG.reduce(function(s,l){return s+l.v},0), TOTL=LOG.length;
+  var PRESETS={
+    line:{grp:0,ord:"arr",fx:1,r6:0},
+    group:{grp:1,ord:"arr",fx:1,r6:0},
+    prio:{grp:1,ord:"vph",fx:1,r6:0},
+    team:{grp:1,ord:"vph",fx:2,r6:0},
+    full:{grp:1,ord:"vph",fx:1,r6:1}
+  };
+  function money(n){return "$"+Math.round(n).toLocaleString("en-US")+"K"}
+  function hr(n){return (Math.round(n*10)/10).toFixed(1).replace(/\.0$/,"")+" h"}
+  function num(id,def){var v=parseFloat($(id).value);return isNaN(v)||v<0?def:v}
+
+  function buildRules(){
+    $("rules").innerHTML=RULES.map(function(r,i){
+      return '<div class="rule"><div class="top"><input type="checkbox" id="r'+i+'-on"'+(r.on?" checked":"")+' aria-label="Enable rule '+(i+1)+'"><span class="sw" style="background:var(--c'+(i+1)+')"></span><b>R'+(i+1)+' '+r.n+'</b></div>'+
+        '<div class="kw"><label class="sr" for="r'+i+'-kw" style="font-size:12px;color:var(--muted)">Keyword in the message</label><input type="text" id="r'+i+'-kw" value="'+r.kw+'" autocomplete="off"></div>'+
+        '<div class="nums"><div><label for="r'+i+'-fx">Fix once, hours</label><input type="number" id="r'+i+'-fx" min="0" max="24" step="0.5" value="'+r.fx+'"></div>'+
+        '<div><label for="r'+i+'-ln">Per line, hours</label><input type="number" id="r'+i+'-ln" min="0" max="24" step="0.5" value="'+r.ln+'"></div>'+
+        '<div><label for="r'+i+'-wt">Approval wait, hours</label><input type="number" id="r'+i+'-wt" min="0" max="48" step="1" value="'+r.wt+'"></div></div>'+
+        '<div class="hit" id="r'+i+'-hit"></div></div>';
+    }).join("");
+  }
+  function readRules(){
+    return RULES.map(function(r,i){return {n:r.n,on:$("r"+i+"-on").checked,kw:$("r"+i+"-kw").value.trim().toLowerCase(),fx:num("r"+i+"-fx",r.fx),ln:num("r"+i+"-ln",r.ln),wt:num("r"+i+"-wt",r.wt)}});
+  }
+  function cfg(){return {grp:$("grp").checked,ord:$("ord").value,fx:+$("fx").value,co:+$("co").value,rd:+$("rd").value/100,un:num("un",2)}}
+
+  function classify(rules){
+    return LOG.map(function(l){
+      var hit=-1, low=l.m.toLowerCase();
+      for(var i=0;i<rules.length;i++){ if(rules[i].on&&rules[i].kw&&low.indexOf(rules[i].kw)>=0){hit=i;break} }
+      return {l:l,r:hit};
+    });
+  }
+  function build(c,rules,cl){
+    var tasks=[];
+    cl.filter(function(x){return x.r<0}).forEach(function(x){ tasks.push({c:-1,dur:c.un,val:x.l.v,lines:1,wait:0,ar:x.l.pos}); });
+    if(c.grp){
+      rules.forEach(function(r,i){
+        var m=cl.filter(function(x){return x.r===i}); if(!m.length) return;
+        tasks.push({c:i,dur:r.fx+r.ln*m.length,val:m.reduce(function(s,x){return s+x.l.v},0),lines:m.length,wait:r.wt,ar:Math.min.apply(null,m.map(function(x){return x.l.pos}))});
+      });
+    }else{
+      cl.filter(function(x){return x.r>=0}).forEach(function(x){
+        var r=rules[x.r]; tasks.push({c:x.r,dur:r.fx*c.rd+r.ln,val:x.l.v,lines:1,wait:r.wt,ar:x.l.pos});
+      });
+    }
+    tasks.forEach(function(t){t.dur=Math.max(t.dur,0.1);t.vph=t.val/t.dur});
+    if(c.ord==="val") tasks.sort(function(a,b){return b.val-a.val||a.ar-b.ar});
+    else if(c.ord==="vph") tasks.sort(function(a,b){return b.vph-a.vph||a.ar-b.ar});
+    else tasks.sort(function(a,b){return a.ar-b.ar});
+    var free=[],i; for(i=0;i<c.fx;i++) free.push(0);
+    tasks.forEach(function(t){
+      var l=0; for(i=1;i<free.length;i++) if(free[i]<free[l]) l=i;
+      t.lane=l; t.start=free[l]; t.end=t.start+t.dur; t.fin=t.end+t.wait; free[l]=t.end;
+    });
+    return tasks;
+  }
+  function col(ci){return ci<0?"var(--cu)":"var(--c"+(ci+1)+")"}
+  function tag(ci){return ci<0?"U":"R"+(ci+1)}
+
+  function render(){
+    var c=cfg(), rules=readRules(), cl=classify(rules), tasks=build(c,rules,cl);
+    $("o-fx").textContent=c.fx; $("o-co").textContent=c.co+" h"; $("o-rd").textContent=Math.round(c.rd*100)+"%";
+    $("rd").disabled=c.grp;
+    var cleared=0, clearedLines=0, all=0, per={};
+    tasks.forEach(function(t){
+      var ok=t.fin<=c.co+1e-9; t.ok=ok; all=Math.max(all,t.fin);
+      var p=per[t.c]||(per[t.c]={lines:0,cl:0,val:0,tot:0}); p.tot+=t.val;
+      if(ok){cleared+=t.val;clearedLines+=t.lines;p.cl+=t.lines;p.val+=t.val}
+    });
+    var unc=cl.filter(function(x){return x.r<0}).length, blocked=TOTV-cleared, bl=TOTL-clearedLines;
+    $("sum").textContent=(bl?bl+" of "+TOTL+" failed lines are still blocked at the cut-off, "+money(blocked)+" of revenue rolling into the next cycle.":"All "+TOTL+" failed lines clear before the cut-off.")+" The plan takes "+hr(all)+" end to end against a cut-off in "+c.co+" h. "+unc+" lines match no rule.";
+    $("kpis").innerHTML=
+      '<div class="kpi ok"><div class="n">'+money(cleared)+'</div><div class="l">Cleared by the cut-off</div></div>'+
+      '<div class="kpi '+(blocked?"bad":"ok")+'"><div class="n">'+money(blocked)+'</div><div class="l">Still blocked</div></div>'+
+      '<div class="kpi '+(bl?"bad":"ok")+'"><div class="n">'+bl+' / '+TOTL+'</div><div class="l">Lines still blocked</div></div>'+
+      '<div class="kpi '+(unc?"warn":"ok")+'"><div class="n">'+unc+'</div><div class="l">Unclassified lines</div></div>'+
+      '<div class="kpi '+(all<=c.co?"ok":"warn")+'"><div class="n">'+hr(all)+'</div><div class="l">Time to clear everything</div></div>';
+    chart(c,tasks,all);
+    var used=rules.map(function(r,i){return i}).filter(function(i){return cl.some(function(x){return x.r===i})});
+    $("legend").innerHTML=used.map(function(i){return '<span><i style="background:'+col(i)+'"></i>R'+(i+1)+' '+rules[i].n+'</span>'}).join("")+(unc?'<span><i style="background:var(--cu)"></i>U Unclassified</span>':"");
+    var order=used.concat(unc?[-1]:[]);
+    $("cls").innerHTML=order.map(function(ci){
+      var m=cl.filter(function(x){return x.r===ci}), val=m.reduce(function(s,x){return s+x.l.v},0), p=per[ci]||{cl:0};
+      var cls=p.cl===m.length?"ok":p.cl===0?"bad":"warn", txt=p.cl===m.length?"Cleared":p.cl===0?"Blocked":p.cl+" of "+m.length+" cleared";
+      var nm=ci<0?"Unclassified":rules[ci].n;
+      var sub=ci<0?"Each line is its own investigation.":"Keyword \""+rules[ci].kw+"\".";
+      return '<li><span class="sw2" style="background:'+col(ci)+'">'+tag(ci)+'</span><span><b>'+nm+'</b><small>'+sub+' '+m.length+' lines, '+money(val)+'.</small></span><span class="st '+cls+'">'+txt+'</span></li>';
+    }).join("");
+    $("log").innerHTML=cl.map(function(x){
+      var chip=x.r<0?'<span class="chp u">Unclassified</span>':'<span class="chp" style="background:'+col(x.r)+'">R'+(x.r+1)+' '+rules[x.r].n+'</span>';
+      return '<div class="lg"><span class="m">'+x.l.m+'</span><span class="am">'+money(x.l.v)+'</span><span class="ch">'+chip+'</span></div>';
+    }).join("");
+    rules.forEach(function(r,i){var n=cl.filter(function(x){return x.r===i}).length; $("r"+i+"-hit").textContent=!r.on?"Disabled":!r.kw?"No keyword":"Matches "+n+" of "+TOTL+" lines";});
+  }
+
+  function chart(c,tasks,all){
+    var W=560,L=34,R=12,T=12,rowH=40,B=30, H=T+rowH*c.fx+B, pw=W-L-R;
+    var tmax=Math.max(c.co*1.15, all*1.05, 6), X=function(h){return L+h/tmax*pw};
+    var step=tmax>30?6:tmax>16?4:2, s="", h, i;
+    for(i=0;i<c.fx;i++){ s+='<rect class="lane" x="'+L+'" y="'+(T+i*rowH+3)+'" width="'+pw+'" height="'+(rowH-6)+'" rx="6"/><text class="tx" x="'+(L-6)+'" y="'+(T+i*rowH+rowH/2+4)+'" text-anchor="end">P'+(i+1)+'</text>'; }
+    for(h=0;h<=tmax;h+=step){ s+='<line class="ax" x1="'+X(h)+'" x2="'+X(h)+'" y1="'+T+'" y2="'+(T+rowH*c.fx)+'"/><text class="tx" x="'+X(h)+'" y="'+(H-12)+'" text-anchor="middle">'+h+' h</text>'; }
+    tasks.forEach(function(t){
+      var y=T+t.lane*rowH+7, hh=rowH-14, x=X(t.start), w=Math.max(X(t.end)-X(t.start),2), cc=col(t.c);
+      if(t.wait>0) s+='<rect x="'+X(t.end)+'" y="'+(y+4)+'" width="'+(X(t.fin)-X(t.end))+'" height="'+(hh-8)+'" rx="4" fill="none" stroke="'+cc+'" stroke-width="1.5" stroke-dasharray="4 3"/>';
+      s+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+hh+'" rx="4" fill="'+cc+'"'+(t.ok?'':' stroke="var(--bad)" stroke-width="2"')+'/>';
+      if(w>20) s+='<text class="bt" x="'+(x+w/2)+'" y="'+(y+hh/2+4)+'" text-anchor="middle">'+tag(t.c)+'</text>';
+    });
+    s+='<line class="cut" x1="'+X(c.co)+'" x2="'+X(c.co)+'" y1="'+(T-6)+'" y2="'+(T+rowH*c.fx)+'"/><text class="cutt" x="'+Math.min(X(c.co)+4,W-70)+'" y="'+(T+4)+'">Cut-off</text>';
+    $("chart").setAttribute("viewBox","0 0 "+W+" "+H);
+    $("chart-g").innerHTML=s;
+  }
+
+  function clearChips(){document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")})}
+  function apply(p){$("grp").checked=!!p.grp;$("ord").value=p.ord;$("fx").value=p.fx;$("r5-on").checked=!!p.r6;render()}
+  buildRules();
+  ["grp","ord"].forEach(function(id){$(id).addEventListener("change",function(){clearChips();render()})});
+  ["fx","co","rd"].forEach(function(id){$(id).addEventListener("input",function(){clearChips();render()})});
+  $("un").addEventListener("input",render);
+  $("rules").addEventListener("input",render); $("rules").addEventListener("change",render);
+  document.querySelectorAll(".chip").forEach(function(b){
+    b.addEventListener("click",function(){clearChips();b.setAttribute("aria-pressed","true");apply(PRESETS[b.dataset.p])});
+  });
+  apply(PRESETS.line);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Andres Videla | Revenue systems architecture</title>
+<meta name="description" content="Notes on lead-to-cash architecture, integration reliability and applied AI in revenue engineering, by Andres Videla.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Andres Videla | Revenue systems architecture">
+<meta property="og:url" content="https://andres-videla.com/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Lead-to-cash architecture: interactive demos and write-ups on CPQ, billing, integrations and AI.">
+<meta property="og:image" content="https://andres-videla.com/assets/portfolio-catalog.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/rails.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="name" href="#">Andres Videla</a>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a href="#portfolio">Portfolio</a></li>
+        <li><a href="#practice">Practice</a></li>
+        <li><a href="#notes">Field notes</a></li>
+        <li><a href="#cases">Cases</a></li>
+        <li><a href="#stack">Stack</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="section first" id="portfolio">
+    <div class="wrap">
+      <p class="kicker">Enterprise architect for lead-to-cash, integration and applied AI in B2B SaaS.</p>
+      <div class="section-head">
+        <h1>Portfolio</h1>
+        <p class="intro">Interactive demos and architecture write-ups. Everything here uses fictional data or composite cases, and each piece opens on its own page.</p>
+      </div>
+      <div class="rails">
+      <div class="rail-block" data-short="CPQ and Revenue Cloud">
+        <div class="rail-head">
+          <div>
+            <h3 class="rail-title" id="rail-1-t">CPQ and Revenue Cloud</h3>
+            <p class="rail-sub">Pricing, quoting, approvals and the road to Revenue Cloud.</p>
+          </div>
+          <div class="rail-nav" aria-label="Scroll CPQ and Revenue Cloud">
+            <button class="rail-btn" type="button" data-dir="prev" aria-label="Previous in CPQ and Revenue Cloud">&larr;</button>
+            <button class="rail-btn" type="button" data-dir="next" aria-label="Next in CPQ and Revenue Cloud">&rarr;</button>
+          </div>
+        </div>
+        <div class="rail-wrap">
+          <div class="rail" tabindex="0" role="region" aria-labelledby="rail-1-t">
+      <a class="featured" href="/demo/quote-editor/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/quote-editor-demo.png" width="1200" height="628" alt="Screenshot of the quote line editor demo: product catalog, quote lines, approvals and a simulated co-pilot."></span>
+      <span class="f-title">Salesforce CPQ: quote line editor demo</span>
+      <span class="f-text">An interactive CPQ quote editor built on fictional data. Add products, change discounts and watch the approval path and a simulated co-pilot respond.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/price-waterfall/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/price-waterfall-demo.png" width="1200" height="628" alt="Screenshot of the price waterfall demo: deal sliders, a waterfall chart from list price to net price with the price floor marked, and key figures for net ACV, TCV, blended discount and margin."></span>
+      <span class="f-title">Salesforce CPQ: price waterfall and approval route demo</span>
+      <span class="f-text">Change a fictional deal and watch the discount waterfall, the approval route and the quarter forecast respond, including whether the approval clock fits in the time left.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/discount-threshold-leakage/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/discount-leakage-demo.png" width="1200" height="628" alt="Screenshot of the discount leakage demo: a histogram of line discounts with two highlighted bars just under the 10 percent manager threshold and a dashed line for the 20 percent Finance threshold."></span>
+      <span class="f-title">Salesforce CPQ: discount leakage at approval thresholds</span>
+      <span class="f-text">Explore a year of fictional quote lines, find discounts bunching just under approval thresholds, and see by rep, product and timing where it concentrates and what the data cannot prove.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/call-to-quote/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/call-to-quote-demo.png" width="1200" height="628" alt="Screenshot of the call-to-quote validator demo: a call transcript with highlighted terms, a pipeline result marked Needs review and a draft quote line."></span>
+      <span class="f-title">Gong to Salesforce CPQ: call-to-quote validator demo</span>
+      <span class="f-text">Paste a fictional call transcript and watch commercial terms become a draft quote line, checked against an editable pricing policy.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+                </div>
+        </div>
+      </div>
+      <div class="rail-block" data-short="Quote-to-cash">
+        <div class="rail-head">
+          <div>
+            <h3 class="rail-title" id="rail-2-t">Quote-to-cash and billing</h3>
+            <p class="rail-sub">From a closed deal to an invoice, and the revenue numbers that follow.</p>
+          </div>
+          <div class="rail-nav" aria-label="Scroll Quote-to-cash and billing">
+            <button class="rail-btn" type="button" data-dir="prev" aria-label="Previous in Quote-to-cash and billing">&larr;</button>
+            <button class="rail-btn" type="button" data-dir="next" aria-label="Next in Quote-to-cash and billing">&rarr;</button>
+          </div>
+        </div>
+        <div class="rail-wrap">
+          <div class="rail" tabindex="0" role="region" aria-labelledby="rail-2-t">
+      <a class="featured" href="/demo/quote-to-cash-reconciliation/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/quote-to-cash-reconciliation-demo.png" width="1200" height="628" alt="Screenshot of the quote-to-cash reconciliation demo: control toggles, key figures for failures stopped, caught and found late, and a board of fictional deals from quote to cash."></span>
+      <span class="f-title">Salesforce and NetSuite: quote-to-cash reconciliation demo</span>
+      <span class="f-text">Switch preventive gates and a parity reconciliation job on and off, and watch fourteen fictional deals show where each handoff failure is stopped, caught late or missed.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/billing-invoice-run-triage/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/billing-invoice-run-triage-demo.png" width="1200" height="628" alt="Screenshot of the invoice run triage demo: triage plan controls, revenue cleared and blocked at the cut-off, and a schedule of fixes colored by root cause against a dashed cut-off line."></span>
+      <span class="f-title">Salesforce Billing: invoice run triage demo</span>
+      <span class="f-text">Write classification rules for a fictional exception log, group the failures by cause and rank the work by value per hour against the billing cut-off.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/commission-plan-whatif/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/commission-plan-demo.png" width="1200" height="628" alt="Screenshot of the commission plan what-if demo: plan sliders and a payout curve with each rep marked, showing a jump at 100 percent attainment under a retroactive accelerator."></span>
+      <span class="f-title">Spiff and Salesforce: commission plan what-if</span>
+      <span class="f-text">Change the rate, accelerator, cap, retroactivity, kicker and clawback of a fictional commission plan, and see what it costs and which reps it moves before it ships.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/arr-bridge-sync-lag/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/arr-bridge-demo.png" width="1200" height="628" alt="Screenshot of the ARR bridge demo: a waterfall from opening to closing ARR with dashed outlines marking the true values, next to pipeline sliders and data model safeguards."></span>
+      <span class="f-title">Snowflake and Fivetran: ARR bridge under sync lag</span>
+      <span class="f-text">Move sync latency and report time, then fix the data model one safeguard at a time, and watch the ARR that finance reports drift from the true bridge.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+                </div>
+        </div>
+      </div>
+      <div class="rail-block" data-short="Integration and data">
+        <div class="rail-head">
+          <div>
+            <h3 class="rail-title" id="rail-3-t">Integration and data</h3>
+            <p class="rail-sub">Syncs, retries, data volume and the signals that cross system boundaries.</p>
+          </div>
+          <div class="rail-nav" aria-label="Scroll Integration and data">
+            <button class="rail-btn" type="button" data-dir="prev" aria-label="Previous in Integration and data">&larr;</button>
+            <button class="rail-btn" type="button" data-dir="next" aria-label="Next in Integration and data">&rarr;</button>
+          </div>
+        </div>
+        <div class="rail-wrap">
+          <div class="rail" tabindex="0" role="region" aria-labelledby="rail-3-t">
+      <a class="featured" href="/demo/idempotent-order-sync/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/idempotent-order-sync-demo.png" width="1200" height="628" alt="Screenshot of the idempotent order sync demo: receiver design controls, key figures for correct, duplicate and stale orders, and a table of fictional NetSuite sales orders."></span>
+      <span class="f-title">Workato and NetSuite: idempotent order sync replay demo</span>
+      <span class="f-text">Inject timeouts and out-of-order delivery into a fictional order sync, replay it, and watch what a stable key and a version check change.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/sync-divergence/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/sync-divergence-demo.png" width="1200" height="628" alt="Screenshot of the sync divergence lab: failure sliders and safeguard toggles, an outcome panel showing six of six accounts out of sync, and an event stream with dropped, duplicated and late events."></span>
+      <span class="f-title">Workato and NetSuite: sync divergence lab</span>
+      <span class="f-text">Inject dropped, duplicate and delayed events into a fictional CRM to ERP sync, then switch on idempotency, ordering, dead-letter handling and reconciliation to see which failures each one fixes.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/ldv-selectivity-skew/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/ldv-selectivity-skew-demo.png" width="1200" height="628" alt="Screenshot of the Salesforce LDV demo: query filter controls, a full table scan result at 50 million rows, and a log chart where rows matched crosses the selective index limits."></span>
+      <span class="f-title">Salesforce LDV: query selectivity and data skew explorer</span>
+      <span class="f-text">Grow a fictional object from sandbox size to production size and watch a query lose its index, then see how much of a parallel load one oversized parent record touches. Includes read-only templates for running the audit in your own org.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/signal-map/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/signal-map-demo.png" width="1200" height="628" alt="Screenshot of the call-to-cash signal map: five systems from Gong to the forecast connected by animated signal flows, failure chips on each system, a tray of controls and a forecast signal confidence gauge."></span>
+      <span class="f-title">Gong to NetSuite: call-to-cash signal map</span>
+      <span class="f-text">Follow a revenue signal from Gong to the forecast, inject failures at each system and drag controls onto the map to contain them.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+                </div>
+        </div>
+      </div>
+      <div class="rail-block" data-short="Applied AI">
+        <div class="rail-head">
+          <div>
+            <h3 class="rail-title" id="rail-4-t">AI and conversation data</h3>
+            <p class="rail-sub">Where call data and AI can be trusted, and where they need guardrails.</p>
+          </div>
+          <div class="rail-nav" aria-label="Scroll AI and conversation data">
+            <button class="rail-btn" type="button" data-dir="prev" aria-label="Previous in AI and conversation data">&larr;</button>
+            <button class="rail-btn" type="button" data-dir="next" aria-label="Next in AI and conversation data">&rarr;</button>
+          </div>
+        </div>
+        <div class="rail-wrap">
+          <div class="rail" tabindex="0" role="region" aria-labelledby="rail-4-t">
+      <a class="featured" href="/demo/ai-guardrails/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/ai-guardrails-demo.png" width="1200" height="628" alt="Screenshot of the AI guardrail playground: a call transcript and guardrail switches on the left, and AI-proposed CRM updates sorted into auto-apply, human review and blocked lanes, with correct and wrong badges."></span>
+      <span class="f-title">Gong and Salesforce: AI guardrail playground</span>
+      <span class="f-text">Turn guardrails on and off, drag AI-proposed CRM updates between lanes and reveal which ones were wrong.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/signal-reliability/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/signal-reliability-demo.png" width="1200" height="628" alt="Screenshot of the revenue signal reliability simulator: sliders for coverage, hygiene, latency and ownership, a forecast signal index and a ranked breakdown of where confidence is lost."></span>
+      <span class="f-title">Gong and Salesforce: revenue signal reliability simulator</span>
+      <span class="f-text">Move four levers (transcript coverage, CRM hygiene, sync latency and tracker ownership) and watch an illustrative forecast signal index degrade.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+            <a class="featured" href="/demo/tracker-taxonomy/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/tracker-taxonomy-demo.png" width="1200" height="628" alt="Screenshot of the tracker taxonomy designer: Gong trackers on the left, Salesforce Opportunity fields with mapped trackers in the center, and a health index with findings on the right."></span>
+      <span class="f-title">Gong and Salesforce: tracker taxonomy designer</span>
+      <span class="f-text">Drag conversation trackers onto Opportunity fields and watch a health index react to duplication, ambiguity and two-writer conflicts.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+                </div>
+        </div>
+      </div>
+      <div class="rail-block" data-short="Implementation">
+        <div class="rail-head">
+          <div>
+            <h3 class="rail-title" id="rail-5-t">Implementation sequences</h3>
+            <p class="rail-sub">Start-to-finish reference sequences for Salesforce cloud implementations, from discovery to hypercare.</p>
+          </div>
+          <div class="rail-nav" aria-label="Scroll Implementation sequences">
+            <button class="rail-btn" type="button" data-dir="prev" aria-label="Previous in Implementation sequences">&larr;</button>
+            <button class="rail-btn" type="button" data-dir="next" aria-label="Next in Implementation sequences">&rarr;</button>
+          </div>
+        </div>
+        <div class="rail-wrap">
+          <div class="rail" tabindex="0" role="region" aria-labelledby="rail-5-t">
+          <a class="featured" href="/demo/revenue-cloud-implementation-sequence/">
+      <span class="tag">Interactive demo</span>
+      <span class="thumb"><img src="/assets/revenue-cloud-implementation-sequence-demo.png" width="1200" height="628" alt="Screenshot of the Revenue Cloud implementation sequence planner: starting point and scope controls, key counts, the order of the main workstreams and the first phase with its steps and exit gates."></span>
+      <span class="f-title">Salesforce Revenue Cloud: implementation sequence planner</span>
+      <span class="f-text">Choose a starting point, scope and complexity drivers, and get a six-phase sequence from discovery to hypercare, with dependencies, deliverables and exit gates tagged as documented or practice.</span>
+      <span class="f-cta">Open the demo</span>
+      </a>
+          <a class="featured" href="/demo/financial-services-cloud-implementation-sequence/">
+            <span class="tag">Interactive demo</span>
+            <span class="thumb"><img src="/assets/financial-services-cloud-implementation-sequence-demo.png" width="1200" height="628" alt="Screenshot of the Financial Services Cloud implementation sequence planner: starting point and scope controls, key counts, the order of the main workstreams and the first phase with its steps and exit gates."></span>
+            <span class="f-title">Salesforce Financial Services Cloud: implementation sequence planner</span>
+            <span class="f-text">Choose a starting point, scope and complexity drivers, and get a six-phase sequence from discovery to hypercare for households, financial accounts, rollups and data sharing, with documented steps and practice steps kept apart.</span>
+            <span class="f-cta">Open the demo</span>
+          </a>
+          <a class="featured" href="/demo/lead-routing-simulator/">
+            <span class="tag">Interactive demo</span>
+            <span class="thumb"><img src="/assets/lead-routing-simulator-demo.png" width="1200" height="628" alt="Screenshot of a Lightning-style Leads list view with fictional leads, their ratings and owners, beside a lead routing component with four rules and a capacity limit."></span>
+            <span class="f-title">Salesforce Sales Cloud: lead routing simulator</span>
+            <span class="f-text">A Lightning-style Leads list view with a routing component beside it. Pick a rule, tighten capacity or send a rep out of office, and watch the Lead Owner column show which hot leads reach a rep who can act and which have no owner.</span>
+            <span class="f-cta">Open the demo</span>
+          </a>
+          <a class="featured" href="/demo/forecast-rollup-what-if/">
+            <span class="tag">Interactive demo</span>
+            <span class="thumb"><img src="/assets/forecast-rollup-what-if-demo.png" width="1200" height="628" alt="Screenshot of the forecast roll-up what-if as a Lightning-style Forecasts page: a summary header with a Commit alert, a forecast grid by manager and rep with rollup columns, and an opportunity detail panel that explains why the forecast moves."></span>
+            <span class="f-title">Salesforce Forecasting: roll-up what-if</span>
+            <span class="f-text">Select a rep or manager in a Lightning-style forecast grid, open a deal, then drop it from the quarter or pull it in. Search, filter and sort the opportunity list and trace which Commit, Best Case and Pipeline columns move.</span>
+            <span class="f-cta">Open the demo</span>
+          </a>
+          <a class="featured" href="/demo/stage-exit-checklist/">
+            <span class="tag">Interactive demo</span>
+            <span class="thumb"><img src="/assets/stage-exit-checklist-demo.png" width="1200" height="628" alt="Screenshot of the Lightning-style opportunity stage exit checklist: an Opportunities list view beside a record page with a Path, where moving to Proposal is blocked and the missing items are listed."></span>
+            <span class="f-title">Salesforce Sales Cloud: opportunity stage exit checklist</span>
+            <span class="f-text">On a Lightning-style Opportunities list view and record page, pick a stage on the Path and see a validation rule and a Flow block the move until the evidence is on the record, then switch the rule off to see what an unguarded save lets through.</span>
+            <span class="f-cta">Open the demo</span>
+          </a>
+          </div>
+        </div>
+      </div>
+      </div>
+      <p class="more"><a href="/portfolio/all/">See all work</a></p>
+      <p class="totop"><a href="#">Back to top</a></p>
+    </div>
+  </section>
+
+  <section class="section" id="map">
+    <div class="wrap section-grid">
+      <h2>Where lead-to-cash breaks</h2>
+      <div class="map-grid">
+        <div>
+          <p class="lede"><strong>Revenue systems that stay correct under load.</strong> I design the systems that turn a quote into a contract, an invoice and a ledger entry. My work is keeping them correct at large data volumes, across the boundaries between CRM, billing and ERP, and now with AI in the engineering loop.</p>
+          <div class="links">
+            <a href="https://www.linkedin.com/in/andresvidela/" rel="me noopener" target="_blank">LinkedIn</a>
+            <a href="#contact">Contact</a>
+          </div>
+        </div>
+      <figure class="map">
+        <svg viewBox="0 0 440 420" aria-labelledby="map-title map-desc">
+          <title id="map-title">Lead-to-cash flow with common failure points</title>
+          <desc id="map-desc">Five stages from quote to ledger. Between them: calculation latency, races between automations, duplicate or out of order events, and CRM and ERP divergence.</desc>
+
+          <rect class="node" x="12" y="12" width="170" height="48" rx="4"/>
+          <text class="node-label" x="24" y="33">Quote</text>
+          <text class="node-sub" x="24" y="50">CPQ and RLM</text>
+
+          <rect class="node" x="12" y="100" width="170" height="48" rx="4"/>
+          <text class="node-label" x="24" y="121">Order</text>
+          <text class="node-sub" x="24" y="138">Order management</text>
+
+          <rect class="node" x="12" y="188" width="170" height="48" rx="4"/>
+          <text class="node-label" x="24" y="209">Contract</text>
+          <text class="node-sub" x="24" y="226">Amendments, renewals</text>
+
+          <rect class="node" x="12" y="276" width="170" height="48" rx="4"/>
+          <text class="node-label" x="24" y="297">Invoice</text>
+          <text class="node-sub" x="24" y="314">Billing</text>
+
+          <rect class="node" x="12" y="364" width="170" height="48" rx="4"/>
+          <text class="node-label" x="24" y="385">Ledger</text>
+          <text class="node-sub" x="24" y="402">ERP: NetSuite, SAP</text>
+
+          <line class="edge e1" pathLength="1" x1="97" y1="60" x2="97" y2="92"/>
+          <polygon class="head a1" points="92,92 97,100 102,92"/>
+          <line class="tick n1" x1="106" y1="80" x2="196" y2="80"/>
+          <a href="/portfolio/quote-calculation/"><rect x="200" y="66" width="232" height="40" fill="transparent"/><text class="note n1" x="204" y="84">Calculation latency at peak load</text><text class="note-cta n1" x="204" y="101">Read the case</text></a>
+
+          <line class="edge e2" pathLength="1" x1="97" y1="148" x2="97" y2="180"/>
+          <polygon class="head a2" points="92,180 97,188 102,180"/>
+          <line class="tick n2" x1="106" y1="168" x2="196" y2="168"/>
+          <text class="note n2" x="204" y="172">Races between automations</text>
+
+          <line class="edge e3" pathLength="1" x1="97" y1="236" x2="97" y2="268"/>
+          <polygon class="head a3" points="92,268 97,276 102,268"/>
+          <line class="tick n3" x1="106" y1="256" x2="196" y2="256"/>
+          <text class="note n3" x="204" y="260">Duplicate or out of order events</text>
+
+          <line class="edge e4" pathLength="1" x1="97" y1="324" x2="97" y2="356"/>
+          <polygon class="head a4" points="92,356 97,364 102,356"/>
+          <line class="tick n4" x1="106" y1="344" x2="196" y2="344"/>
+          <text class="note n4" x="204" y="348">CRM and ERP divergence</text>
+        </svg>
+        <figcaption>Where lead-to-cash tends to break. Each marked boundary links to a case as it is published.</figcaption>
+      </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="practice">
+    <div class="wrap section-grid">
+      <h2>Areas of practice</h2>
+      <div class="prose">
+        <div class="item">
+          <h3>Lead-to-cash and monetization engines</h3>
+          <p>Pricing, quoting, contracting, billing and incentive compensation form one pipeline, and its failures compound downstream. I design CPQ and Revenue Lifecycle Management models with explicit state, idempotent transitions and an audit trail that finance can trust. The work covers product and pricing models, amendments and renewals, approval routing, the billing handoff and incentive plans in Spiff.</p>
+        </div>
+        <div class="item">
+          <h3>Distributed integration and ERP orchestration</h3>
+          <p>Systems of record disagree unless integration is designed as a contract. I build event-driven flows and bidirectional syncs between Salesforce and NetSuite, SAP, Oracle, Workday and Stripe, with idempotency keys, retry and dead-letter handling, and reconciliation that detects divergence instead of assuming consistency. The middleware is mostly Workato, over REST and SOAP APIs.</p>
+        </div>
+        <div class="item">
+          <h3>Data reliability and GTM infrastructure</h3>
+          <p>Revenue data has to be correct, queryable and governed at multi-million record scale. I work on large data volume design, Data Cloud, Snowflake and Fivetran pipelines, deployment pipelines for Salesforce metadata, and the Apex and Python layer in between. Reliability is an engineering property with tests, monitoring and release discipline behind it.</p>
+        </div>
+        <div class="item" id="ai">
+          <h3>Applied AI in engineering</h3>
+          <p>AI is now part of how I build. I use large language models to accelerate integration recipes, data governance models and ETL, and to review metadata, generate tests and draft runbooks. The rules are simple: deterministic behavior at system boundaries, a human accountable for every change that reaches production, evaluation before trust, and no sensitive data in prompts.</p>
+        </div>
+        <p class="totop"><a href="#">Back to top</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="notes">
+    <div class="wrap section-grid">
+      <h2>Field notes: failure modes in revenue systems</h2>
+      <div class="prose">
+        <p class="intro">Revenue systems rarely fail loudly. These patterns recur across CPQ, billing and integration work, each with the design response I reach for first.</p>
+        <dl class="notes">
+          <dt>Silent automation failure</dt>
+          <dd>A flow or recipe stops doing its job without raising an error. Treat expected outcomes as assertions, monitor for the absence of events, and alert on silence.</dd>
+
+          <dt>Approval routing drift</dt>
+          <dd>Rules reference people, roles or fields that change, so quotes stall or reach the wrong approver. Route by role through a single resolver, and add fallback paths and time-based escalation.</dd>
+
+          <dt>Races between automations</dt>
+          <dd>Two triggers, flows or integrations update the same record and the last writer wins. Give each field one owner, order execution explicitly, and use optimistic locking at integration edges.</dd>
+
+          <dt>Calculation latency and platform limits</dt>
+          <dd>Quote calculation slows or hits limits as bundles, lines and rules grow. Bound the problem size, move heavy logic out of the synchronous path, and load test at quarter-end volumes.</dd>
+
+          <dt>Sync divergence</dt>
+          <dd>CRM, billing and ERP drift apart through partial failures and replays. Use idempotent writes, a reconciliation job that proves convergence, and one named system of record per attribute.</dd>
+
+          <dt>Data volume decay</dt>
+          <dd>Queries, reports and triggers degrade as record counts climb into the millions. Rely on selective indexed queries, an archival policy and awareness of data skew.</dd>
+        </dl>
+        <p class="totop"><a href="#">Back to top</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="cases">
+    <div class="wrap section-grid">
+      <h2>Architecture highlights</h2>
+      <div class="prose">
+        <p class="intro">Three composite cases. Each generalizes problems that recur across organizations. None describes a single company or engagement.</p>
+
+        <article class="case">
+          <h3>Quote calculation under quarter-end load</h3>
+          <dl class="case-rows">
+            <dt>Challenge</dt>
+            <dd>Calculation time grows with bundle depth and line count. At quarter close, concurrent edits cause record locks, users retry, and the retries multiply the load.</dd>
+            <dt>Design</dt>
+            <dd>Profile the calculation path and remove redundant rule evaluation. Move enrichment and non-blocking updates to asynchronous jobs, make Apex bulk-safe and lock-aware, and cap line growth through product model changes. Add a load test that replays a quarter-end profile.</dd>
+            <dt>Outcome</dt>
+            <dd>Quote editing stays responsive at peak, lock errors become rare and observable, and the team runs a repeatable performance test before each release.</dd>
+          </dl>
+          <p class="more"><a href="/portfolio/quote-calculation/">Read the full write-up</a></p>
+        </article>
+
+        <article class="case">
+          <h3>CRM to ERP orchestration with provable convergence</h3>
+          <dl class="case-rows">
+            <dt>Challenge</dt>
+            <dd>Contracts and invoices flow from Salesforce to billing and the ERP. After partial failures and replays, the ledger and the CRM disagree, and finance reconciles by hand at every close.</dd>
+            <dt>Design</dt>
+            <dd>Event-driven flows in Workato with idempotency keys, ordered processing per account, retry with backoff and a dead-letter queue. A scheduled reconciliation compares both systems and reports differences by cause. Each attribute has one named system of record.</dd>
+            <dt>Outcome</dt>
+            <dd>Divergence is detected shortly after it happens instead of at close, replays are safe, and the trail between commercial and financial systems reads as one chain.</dd>
+          </dl>
+        </article>
+
+        <article class="case">
+          <h3>Governing large data volumes in a revenue organization</h3>
+          <dl class="case-rows">
+            <dt>Challenge</dt>
+            <dd>Objects with millions of records slow reports, triggers and integrations. Ownership and parent-child skew cause locking during bulk loads.</dd>
+            <dt>Design</dt>
+            <dd>Selective, indexed access paths. A lifecycle policy that moves cold records to the warehouse through Fivetran into Snowflake. Skew-aware loading and governed ingestion pipelines with data quality checks.</dd>
+            <dt>Outcome</dt>
+            <dd>Predictable performance, a documented retention model, and analytics that no longer depend on querying the CRM directly.</dd>
+          </dl>
+        </article>
+        <p class="totop"><a href="#">Back to top</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="stack">
+    <div class="wrap section-grid">
+      <h2>Stack and standards</h2>
+      <div class="prose">
+        <dl class="stack">
+          <dt>Platform</dt>
+          <dd>Salesforce CPQ, Revenue Cloud, Revenue Lifecycle Management, Data Cloud, Sales and Service Cloud, PRM, CRM Analytics, Spiff, Billing.</dd>
+          <dt>Integration and data</dt>
+          <dd>Workato, REST and SOAP APIs, event-driven design, Snowflake, Fivetran, NetSuite, SAP, Oracle, Workday, Stripe.</dd>
+          <dt>Languages and delivery</dt>
+          <dd>Apex, LWC, Python, C++, SQL, Node.js, SuiteScript, CI/CD, DevOps.</dd>
+          <dt>GTM systems</dt>
+          <dd>LeanData, Gong, Outreach, Clay, Unify, ZoomInfo, HubSpot.</dd>
+          <dt>Applied AI</dt>
+          <dd>Claude for integration design, test generation, review and runbooks, under human review.</dd>
+          <dt>Credentials</dt>
+          <dd>Salesforce Certified Advanced Administrator, CPQ Administrator, Platform Data Architect and Administrator.</dd>
+        </dl>
+        <p class="totop"><a href="#">Back to top</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="about">
+    <div class="wrap section-grid">
+      <h2>Background</h2>
+      <div class="prose">
+        <dl class="glance">
+          <dt>Focus</dt>
+          <dd>Lead-to-cash architecture, integration reliability, applied AI</dd>
+          <dt>Experience</dt>
+          <dd>20+ years in engineering, 8+ years in Salesforce ecosystems</dd>
+          <dt>Sectors</dt>
+          <dd>B2B SaaS, banking, insurance, manufacturing</dd>
+          <dt>Education</dt>
+          <dd>Engineering degree in electronics, Universidad Nacional de San Juan</dd>
+          <dt>Languages</dt>
+          <dd>English and Spanish</dd>
+          <dt>Based in</dt>
+          <dd>Argentina</dd>
+        </dl>
+        <p>More than twenty years of engineering, from embedded and industrial systems in C++ and Python to distributed services and APIs. For the last eight years the focus has been Salesforce ecosystems across B2B SaaS, banking, insurance and manufacturing.</p>
+        <p class="totop"><a href="#">Back to top</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section contact" id="contact">
+    <div class="wrap section-grid">
+      <h2>Contact</h2>
+      <div class="prose">
+        <p>I enjoy exchanging ideas with architects, RevOps leaders and founders who work on revenue systems, especially on reliability, integration design and the practical limits of AI in engineering.</p>
+        <div class="links">
+          <a href="https://www.linkedin.com/in/andresvidela/" rel="me noopener" target="_blank">LinkedIn</a>
+          <a href="mailto:andvid@andres-videla.com">andvid@andres-videla.com</a>
+        </div>
+        <p class="totop"><a href="#">Back to top</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="base">
+  <div class="wrap">
+    <p>&copy; 2026 Andres Videla.</p>
+    <p>Views expressed here are my own and do not represent any employer or client. Salesforce and other product names are trademarks of their respective owners.</p>
+  </div>
+</footer>
+<script src="/assets/rails.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snowflake and Fivetran: ARR Bridge Under Sync Lag | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative model of how sync lag, missed deletes and load-time bucketing move the ARR a finance team reports at period close.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Snowflake and Fivetran: ARR Bridge Under Sync Lag">
+<meta property="og:url" content="https://andres-videla.com/demo/arr-bridge-sync-lag/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Move sync latency, report time and four data-model safeguards, and watch the reported ARR bridge drift from the true one.">
+<meta property="og:image" content="https://andres-videla.com/assets/arr-bridge-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#F9FAFB; --surface:#FFFFFF; --panel:#F1F3F6; --ink:#14181F; --muted:#566070; --rule:#DCE0E6;
+  --accent:#2F4B6E; --ok:#2E7D5B; --warn:#9A4A1F; --bad:#B23A2E; --blue:#2F6FB5; --grey:#98A2B3;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+    --accent:#8FB3E6; --ok:#5CC498; --warn:#E5955F; --bad:#EE7B6E; --blue:#74AEEA; --grey:#6B7788; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#12161C; --surface:#1A2029; --panel:#232B36; --ink:#E7EBF1; --muted:#9AA6B5; --rule:#2F3946;
+  --accent:#8FB3E6; --ok:#5CC498; --warn:#E5955F; --bad:#EE7B6E; --blue:#74AEEA; --grey:#6B7788; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+.notice{background:var(--panel);border-bottom:1px solid var(--rule);color:var(--muted);font-size:13px;padding:8px 16px;text-align:center}
+.back{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 48px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px}
+h1{font:700 clamp(1.7rem,3.6vw,2.5rem)/1.12 var(--serif);letter-spacing:-.02em;margin:0 0 8px}
+.dek{color:var(--muted);max-width:48rem;margin:0 0 20px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:20px}
+.presets .lbl{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.btn{border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:7px 14px;border-radius:99px;cursor:pointer;font:inherit;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px;min-width:0}
+.card h2{font:700 12px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.card h3{font:700 12px var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px}
+.ctl{margin-bottom:14px}
+.ctl .row{display:flex;justify-content:space-between;font-size:14px;margin-bottom:2px}
+.ctl .row b{font-family:var(--mono)}
+.ctl small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+input[type=range]{width:100%;margin:0;accent-color:var(--accent)}
+.tg{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:14px;cursor:pointer}
+.tg input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.tg small{display:block;color:var(--muted);font-size:12px;line-height:1.35}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.btn.ghost{border-radius:6px}
+.seed{font:12px var(--mono);color:var(--muted)}
+.right{display:grid;gap:20px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px}
+.kpi{background:var(--panel);border-radius:6px;padding:9px 11px}
+.kpi small{display:block;color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.kpi b{font:700 22px var(--serif);font-variant-numeric:tabular-nums}
+.kpi.bad b{color:var(--bad)} .kpi.good b{color:var(--ok)} .kpi.warn b{color:var(--warn)}
+.insight{margin-top:12px;padding:10px 12px;border-radius:6px;background:var(--panel);font-size:14.5px;border-left:3px solid var(--grey)}
+.insight.bad{border-left-color:var(--bad)} .insight.good{border-left-color:var(--ok)} .insight.warn{border-left-color:var(--warn)}
+.alert{margin-top:8px;font-size:13px;color:var(--muted)}
+.alert b{color:var(--ink)}
+svg{display:block;width:100%;height:auto}
+.ax{stroke:var(--rule);stroke-width:1} .gr{stroke:var(--rule);stroke-dasharray:2 4}
+.tk{fill:var(--muted);font:11px var(--sans)} .lb{fill:var(--ink);font:600 12px var(--sans);text-anchor:middle}
+.sb{fill:var(--muted);font:11px var(--sans);text-anchor:middle} .vl{font:600 11.5px var(--sans)}
+.leg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.leg i{display:inline-block;width:14px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:480px}
+th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--rule);font-weight:700}
+th:first-child,td:first-child{text-align:left}
+td{padding:8px;border-bottom:1px solid var(--rule);text-align:right;font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--sans);font-size:14px}
+td.diff{color:var(--bad);font-weight:700} td.okc{color:var(--ok)}
+.help{font-size:13px;color:var(--muted);margin:8px 0 0}
+.foot{margin-top:28px;color:var(--muted);font-size:13px;border-top:1px solid var(--rule);padding-top:16px}
+.foot p{margin:0 0 6px}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+@media (max-width:480px){.wrap{padding:16px 14px 40px}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="notice">Illustrative model with fictional contract events. No real systems, data or vendor APIs are involved, and every parameter is a model input, not a measurement.</div>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Snowflake and Fivetran: ARR bridge under sync lag</h1>
+  <p class="dek">Finance closes the month on the ARR bridge that the warehouse can see. Move the sync latency and the report time, then fix the data model one safeguard at a time. Lag is only one of three ways the reported number drifts from the true one.</p>
+
+  <div class="presets" id="presets" role="group" aria-label="Scenarios"><span class="lbl">Scenario</span></div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Pipeline</h2>
+      <div class="ctl"><div class="row"><label for="lag">Sync latency</label><b id="o_lag"></b></div><input id="lag" type="range" min="0" max="48" step="1"><small>Average hours from a change in the CRM to the row in the warehouse.</small></div>
+      <div class="ctl"><div class="row"><label for="R">Report run, after period end</label><b id="o_R"></b></div><input id="R" type="range" min="0" max="96" step="1"><small>When finance pulls the closing number.</small></div>
+      <h3>Data model safeguards</h3>
+      <label class="tg"><input type="checkbox" id="del"><span>Capture hard deletes<small>Churn recorded as a deleted row reaches the warehouse.</small></span></label>
+      <label class="tg"><input type="checkbox" id="et"><span>Bucket by effective date<small>A late entry lands in the period it belongs to, not the period it loaded in.</small></span></label>
+      <label class="tg"><input type="checkbox" id="gate"><span>Close gate<small>Finance waits until every expected row has arrived.</small></span></label>
+      <label class="tg"><input type="checkbox" id="alert"><span>Freshness alert<small>Flags rows still in flight when the report runs.</small></span></label>
+      <div class="actions"><button class="btn ghost" id="reseed">New random quarter</button><span class="seed" id="seedlab"></span></div>
+    </div>
+
+    <div class="right">
+      <div class="card">
+        <h2>ARR bridge for the period (in $M)</h2>
+        <svg id="bridge" viewBox="0 0 720 300" role="img" aria-label="ARR bridge, reported versus true"></svg>
+        <div class="leg"><span><i style="background:var(--accent)"></i>Reported total</span><span><i style="background:var(--ok)"></i>Reported increase</span><span><i style="background:var(--bad)"></i>Reported decrease</span><span><i style="border:1.5px dashed var(--ink);background:transparent"></i>True value</span></div>
+        <p class="help">The axis does not start at zero, so the movements are visible.</p>
+      </div>
+
+      <div class="card">
+        <h2>What finance would report</h2>
+        <div class="kpis" id="kpis"></div>
+        <div class="insight" id="insight" aria-live="polite"></div>
+        <div class="alert" id="alertline"></div>
+      </div>
+
+      <div class="card">
+        <h2>Reported closing ARR as hours pass after period end</h2>
+        <svg id="curve" viewBox="0 0 720 240" role="img" aria-label="Reported closing ARR over time versus the true value"></svg>
+        <p class="help" id="curvehelp"></p>
+      </div>
+
+      <div class="card">
+        <h2>Bridge line by line</h2>
+        <div class="scroll"><table><thead><tr><th>Movement</th><th>Reported</th><th>True</th><th>Difference</th></tr></thead><tbody id="rows"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <p>Snowflake, Fivetran, Salesforce and other product names are trademarks of their respective owners. This page is not affiliated with or endorsed by any vendor.</p>
+    <p><a href="/portfolio/" class="back">Back to portfolio</a></p>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const M=k=>(k<0?'-$':'$')+(Math.abs(k)/1000).toFixed(2)+'M';
+const SM=k=>(k>0?'+':k<0?'-':'')+'$'+(Math.abs(k)/1000).toFixed(2)+'M';
+const PRESETS={
+  'Typical setup':{lag:24,R:24,del:false,et:false,gate:false,alert:false},
+  'Faster sync only':{lag:2,R:24,del:false,et:false,gate:false,alert:false},
+  'Fix the data model':{lag:24,R:24,del:true,et:true,gate:false,alert:true},
+  'Model plus close gate':{lag:24,R:24,del:true,et:true,gate:true,alert:true}
+};
+const P={...PRESETS['Typical setup']};
+let seed=1;
+const OPEN=12000, HOURS=720;
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function world(seed){
+  const r=rng(seed),ev=[];
+  const R={new:[60,400],exp:[20,150],con:[20,100],churn:[40,300]};
+  for(let i=0;i<38;i++){
+    const x=r(),type=x<.34?'new':x<.62?'exp':x<.74?'con':'churn';
+    const m=R[type],mag=Math.round((m[0]+r()*(m[1]-m[0]))/5)*5;
+    const delta=(type==='new'||type==='exp')?mag:-mag;
+    const eff=r()*HOURS;
+    const late=eff>470&&r()<.4;
+    const src=late?HOURS+6+r()*60:eff+r()*10;
+    ev.push({i,type,delta,eff,src,hard:type==='churn'&&r()<.6,lr:r()});
+  }
+  return ev;
+}
+const CATS=[['new','New business'],['exp','Expansion'],['con','Contraction'],['churn','Churn']];
+function model(ev,P,hoursAfter){
+  const arr=e=>(e.hard&&!P.del)?Infinity:e.src+P.lag*(.5+e.lr);
+  const inc=(e,T)=>P.et?arr(e)<=T:(arr(e)<=HOURS&&arr(e)<=T);
+  const total=(T)=>OPEN+ev.filter(e=>inc(e,T)).reduce((s,e)=>s+e.delta,0);
+  const finite=ev.filter(e=>isFinite(arr(e))).map(arr);
+  let Reff=P.R,gateWait=0;
+  if(P.gate){const need=Math.min(120,Math.max(0,Math.max(...finite)-HOURS));if(need>P.R){gateWait=need-P.R;Reff=need}}
+  const T=HOURS+(hoursAfter==null?Reff:hoursAfter);
+  const rep={},tru={};CATS.forEach(([k])=>{rep[k]=0;tru[k]=0});
+  ev.forEach(e=>{tru[e.type]+=e.delta;if(inc(e,T))rep[e.type]+=e.delta});
+  const trueClose=OPEN+ev.reduce((s,e)=>s+e.delta,0);
+  const repClose=OPEN+CATS.reduce((s,[k])=>s+rep[k],0);
+  let ghost=0,misplaced=0,late=0,inflight=0;
+  ev.forEach(e=>{
+    if(inc(e,T))return;
+    if(e.hard&&!P.del)ghost+=-e.delta;
+    else if(!P.et&&arr(e)>HOURS)misplaced+=e.delta;
+    else late+=e.delta;
+  });
+  ev.forEach(e=>{if(isFinite(arr(e))&&e.src<=T&&arr(e)>T)inflight++});
+  const finalClose=total(HOURS+120);
+  return {rep,tru,trueClose,repClose,ghost,misplaced,late,inflight,gateWait,Reff,finalClose,arr,inc,total};
+}
+
+/* ---------- render ---------- */
+function ns(n,a,t){const e=document.createElementNS('http://www.w3.org/2000/svg',n);for(const k in a){if(k==='fill'||k==='stroke')e.style[k]=a[k];else e.setAttribute(k,a[k])}if(t!=null)e.textContent=t;return e}
+function drawBridge(S){
+  const svg=$('bridge');svg.innerHTML='';
+  const W=720,H=300,Lm=52,Rm=12,Tm=22,Bm=52;
+  const lv=(src)=>{const a=[OPEN];CATS.forEach(([k])=>a.push(a[a.length-1]+src[k]));return a};
+  const rl=lv(S.rep),tl=lv(S.tru);
+  const all=[...rl,...tl];const lo=Math.min(...all)-1500,hi=Math.max(...all)+300;
+  const y=v=>Tm+(H-Tm-Bm)*(1-(v-lo)/(hi-lo));
+  const cw=(W-Lm-Rm)/6,bw=cw*.58;
+  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4;svg.append(ns('line',{class:i?'gr':'ax',x1:Lm,x2:W-Rm,y1:y(v),y2:y(v)}),ns('text',{class:'tk',x:Lm-6,y:y(v)+4,'text-anchor':'end'},M(v)))}
+  const names=['Opening ARR','New business','Expansion','Contraction','Churn','Closing ARR'];
+  names.forEach((nm,i)=>{
+    const x=Lm+i*cw+(cw-bw)/2,mid=x+bw/2;
+    let rt,rb,tt,tb,fill,txt;
+    if(i===0){rt=OPEN;rb=lo;tt=OPEN;tb=lo;fill='var(--accent)';txt=M(OPEN)}
+    else if(i===5){rt=S.repClose;rb=lo;tt=S.trueClose;tb=lo;fill='var(--accent)';txt=M(S.repClose)}
+    else{const a=rl[i-1],b=rl[i],c=tl[i-1],d=tl[i];rt=Math.max(a,b);rb=Math.min(a,b);tt=Math.max(c,d);tb=Math.min(c,d);fill=b>=a?'var(--ok)':'var(--bad)';txt=SM(b-a)}
+    const bar=ns('rect',{x,y:y(rt),width:bw,height:Math.max(1.5,y(rb)-y(rt)),rx:2,fill});svg.append(bar);
+    const g=ns('rect',{x:x-3,y:y(tt),width:bw+6,height:Math.max(1.5,y(tb)-y(tt)),rx:2,fill:'none',stroke:'var(--ink)'});g.setAttribute('stroke-dasharray','4 3');g.style.fill='none';g.style.strokeWidth='1.25';svg.append(g);
+    const labY=Math.min(y(rt),y(tt))-6;
+    svg.append(ns('text',{class:'lb',x:mid,y:labY},txt));
+    svg.append(ns('text',{class:'sb',x:mid,y:H-30},nm));
+    if(i>0&&i<5){const nx=x+bw+3;svg.append(ns('line',{x1:nx,x2:nx+(cw-bw-6),y1:y(rl[i]),y2:y(rl[i]),stroke:'var(--grey)','stroke-dasharray':'2 3'}))}
+  });
+}
+function drawCurve(S){
+  const svg=$('curve');svg.innerHTML='';
+  const W=720,H=240,Lm=52,Rm=14,Tm=16,Bm=36,maxH=120;
+  const pts=[];for(let h=0;h<=maxH;h+=2)pts.push([h,S.total(HOURS+h)]);
+  const vals=[...pts.map(p=>p[1]),S.trueClose];const lo=Math.min(...vals)-150,hi=Math.max(...vals)+150;
+  const x=h=>Lm+(W-Lm-Rm)*h/maxH,y=v=>Tm+(H-Tm-Bm)*(1-(v-lo)/(hi-lo));
+  for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3;svg.append(ns('line',{class:i?'gr':'ax',x1:Lm,x2:W-Rm,y1:y(v),y2:y(v)}),ns('text',{class:'tk',x:Lm-6,y:y(v)+4,'text-anchor':'end'},M(v)))}
+  [0,24,48,72,96,120].forEach(h=>svg.append(ns('text',{class:'tk',x:x(h),y:H-16,'text-anchor':'middle'},h+'h')));
+  svg.append(ns('text',{class:'tk',x:W-Rm,y:H-2,'text-anchor':'end'},'Hours after period end'));
+  svg.append(ns('line',{x1:Lm,x2:W-Rm,y1:y(S.trueClose),y2:y(S.trueClose),stroke:'var(--ink)','stroke-dasharray':'5 4'}));
+  svg.append(ns('text',{class:'vl',x:W-Rm,y:y(S.trueClose)-5,'text-anchor':'end',fill:'var(--ink)'},'True closing ARR '+M(S.trueClose)));
+  let d='M'+x(0)+','+y(pts[0][1]);pts.forEach((p,i)=>{if(i)d+=' H'+x(p[0])+' V'+y(p[1])});
+  svg.append(ns('path',{d,fill:'none',stroke:'var(--accent)','stroke-width':2.5}));
+  const rx=x(Math.min(maxH,S.Reff));
+  svg.append(ns('line',{x1:rx,x2:rx,y1:Tm,y2:H-Bm,stroke:'var(--warn)','stroke-dasharray':'3 3'}));
+  svg.append(ns('circle',{cx:rx,cy:y(S.repClose),r:5,fill:'var(--warn)'}));
+  svg.append(ns('text',{class:'vl',x:Math.min(rx+8,W-150),y:Tm+12,fill:'var(--warn)'},'Report runs here'));
+}
+function render(){
+  const ev=world(seed),S=model(ev,P);S.total=S.total;
+  ['lag','R'].forEach(k=>{if($(k).value!=P[k])$(k).value=P[k];$('o_'+k).textContent=P[k]+'h'});
+  ['del','et','gate','alert'].forEach(k=>$(k).checked=P[k]);
+  $('seedlab').textContent='Quarter #'+seed;
+  document.querySelectorAll('#presets .btn').forEach(b=>b.classList.toggle('on',JSON.stringify(PRESETS[b.dataset.k])===JSON.stringify(P)));
+  const gap=S.repClose-S.trueClose,pct=gap/S.trueClose*100,revised=S.finalClose-S.repClose;
+  $('kpis').innerHTML=[
+    ['True closing ARR',M(S.trueClose),''],
+    ['Reported at close',M(S.repClose),''],
+    ['Gap to true',SM(gap)+' ('+(pct>=0?'+':'')+pct.toFixed(1)+'%)',Math.abs(gap)<1?'good':'bad'],
+    ['Revised later by',Math.abs(revised)<1?'$0.00M':SM(revised),Math.abs(revised)<1?'good':'warn'],
+    ['Close delayed by',S.gateWait?Math.round(S.gateWait)+' hours':'None',S.gateWait?'warn':'']
+  ].map(([a,b,c])=>`<div class="kpi ${c}"><small>${a}</small><b>${b}</b></div>`).join('');
+  const ins=$('insight'),parts=[];
+  if(S.late)parts.push(M(Math.abs(S.late))+' is only late and will arrive');
+  if(S.misplaced)parts.push(M(Math.abs(S.misplaced))+' landed in the next period for good');
+  if(S.ghost)parts.push(M(S.ghost)+' of churn never left the table');
+  if(Math.abs(gap)<1){ins.className='insight good';ins.textContent=P.gate?'The reported bridge matches the true one. The cost is a close delayed by '+Math.round(S.gateWait)+' hours.':'The reported bridge matches the true one at this report time.'}
+  else{ins.className='insight '+((S.ghost||S.misplaced)?'bad':'warn');ins.textContent='Reported closing ARR is '+M(Math.abs(gap))+(gap>0?' above':' below')+' the true value. '+parts.join(', ')+'.'+((S.ghost||S.misplaced)?' Faster sync does not fix the permanent part.':'')}
+  $('alertline').innerHTML=P.alert?(S.inflight?'<b>Freshness alert fired.</b> '+S.inflight+' rows were still in flight when the report ran.':'<b>No alert.</b> Every expected row had arrived.'):'<b>No freshness alert is configured.</b> '+(S.inflight?S.inflight+' rows were still in flight and nobody was told.':'The report looked complete.');
+  drawBridge(S);drawCurve(S);
+  $('curvehelp').textContent=!P.et?'Bucketing by load time means a row that loads after period end never joins this bridge, so the line stays flat below the true value no matter how long finance waits.':(P.del?'With effective-date bucketing and delete capture, the number converges on the true value. Waiting longer is the only remaining lever.':'The line converges, but churn recorded as deleted rows never arrives, so it stops above the true value.');
+  const rows=CATS.map(([k,n])=>{const d=S.rep[k]-S.tru[k];return `<tr><td>${n}</td><td>${SM(S.rep[k])}</td><td>${SM(S.tru[k])}</td><td class="${Math.abs(d)<1?'okc':'diff'}">${Math.abs(d)<1?'0':SM(d)}</td></tr>`});
+  rows.push(`<tr><td><b>Closing ARR</b></td><td>${M(S.repClose)}</td><td>${M(S.trueClose)}</td><td class="${Math.abs(gap)<1?'okc':'diff'}">${Math.abs(gap)<1?'0':SM(gap)}</td></tr>`);
+  $('rows').innerHTML=rows.join('');
+}
+['lag','R'].forEach(k=>$(k).addEventListener('input',e=>{P[k]=+e.target.value;render()}));
+['del','et','gate','alert'].forEach(k=>$(k).addEventListener('change',e=>{P[k]=e.target.checked;render()}));
+Object.keys(PRESETS).forEach(k=>{const b=document.createElement('button');b.className='btn';b.dataset.k=k;b.textContent=k;b.onclick=()=>{Object.assign(P,PRESETS[k]);render()};$('presets').append(b)});
+$('reseed').onclick=()=>{seed=Math.floor(Math.random()*9000)+1;render()};
+render();
+</script>
+</body>
+</html>

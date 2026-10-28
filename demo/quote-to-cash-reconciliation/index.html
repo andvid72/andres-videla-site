@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salesforce and NetSuite: Quote-to-Cash Reconciliation Demo | Andres Videla</title>
+<meta name="description" content="An interactive, illustrative model of where quote-to-cash breaks between Salesforce and NetSuite, and which preventive and detective controls stop each failure class.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://andres-videla.com/demo/quote-to-cash-reconciliation/">
+<link rel="canonical" href="https://andres-videla.com/demo/quote-to-cash-reconciliation/">
+<meta property="og:title" content="Salesforce and NetSuite: Quote-to-Cash Reconciliation Demo">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="Switch controls on and off and watch fourteen fictional deals move from quote to cash, with each failure stopped, caught late or missed.">
+<meta property="og:image" content="https://andres-videla.com/assets/quote-to-cash-reconciliation-demo.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#16181d; --muted:#5b6270; --line:#e2e3e0;
+  --accent:#1f4fd8; --accent-soft:#e8eefc;
+  --ok:#14703f; --ok-soft:#e3f4ea; --warn:#8a5a00; --warn-soft:#fdf0d5; --bad:#a3261f; --bad-soft:#fbe4e2;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+    --accent:#7ea2ff; --accent-soft:#1c2744;
+    --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#101216; --surface:#181b21; --ink:#e8eaee; --muted:#9aa1ae; --line:#2a2e37;
+  --accent:#7ea2ff; --accent-soft:#1c2744;
+  --ok:#5fd19a; --ok-soft:#12301f; --warn:#f0bd5a; --warn-soft:#332710; --bad:#ff8a80; --bad-soft:#3a1816;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:32px 16px 64px}
+.back{display:inline-block;margin-bottom:14px;font-size:14px;color:var(--accent)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1{font-size:clamp(26px,4vw,36px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:0 0 12px;font-weight:600}
+h3{font-size:16px;margin:0 0 4px}
+.lede{color:var(--muted);max-width:780px;margin:0 0 20px}
+.notice{font-size:13px;color:var(--muted);border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;margin-bottom:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+button{font:inherit;cursor:pointer;color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{border:1px solid var(--line);background:var(--surface);padding:6px 12px;border-radius:999px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.tog{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.tog:first-of-type{border-top:0}
+.tog input{margin-top:4px;width:18px;height:18px;accent-color:var(--accent);flex:none}
+.tog b{display:block;font-size:14px}
+.tog small{display:block;color:var(--muted);font-size:13px;line-height:1.4}
+.ctl{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ctl label{display:block;font-size:14px;font-weight:600}
+.ctl label output{float:right;font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sum{font-size:15px;margin:0 0 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg)}
+.kpi .n{font-size:28px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi.ok .n{color:var(--ok)} .kpi.warn .n{color:var(--warn)} .kpi.bad .n{color:var(--bad)}
+.board{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.hrow,.row{display:grid;grid-template-columns:minmax(0,1fr) repeat(6,34px);align-items:center;gap:0}
+.hrow{background:var(--bg);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px;border-bottom:1px solid var(--line)}
+.hrow span{text-align:center}
+.hrow span:first-child{text-align:left}
+.row{width:100%;border:0;border-bottom:1px solid var(--line);background:var(--surface);padding:6px 10px;text-align:left}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--bg)}
+.row[aria-pressed="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.row .who{min-width:0;padding-right:6px}
+.row .who b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .who small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell{display:flex;justify-content:center}
+.g{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;line-height:1;font-style:normal}
+.g.ok{background:var(--ok-soft);color:var(--ok)}
+.g.ok::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.g.stop{border:2px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
+.g.late{background:var(--warn-soft);color:var(--warn);border:2px solid var(--warn)}
+.g.miss{background:var(--bad-soft);color:var(--bad);border:2px solid var(--bad)}
+.g.blk{width:14px;height:2px;border-radius:1px;background:var(--line);margin:10px 4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .g{width:16px;height:16px;font-size:10px}
+.legend .g.ok::before{width:6px;height:6px}
+.legend .g.blk{width:12px;height:2px;margin:7px 2px}
+.detail{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.detail ol{list-style:none;margin:10px 0 12px;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.detail li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;background:var(--bg)}
+.detail li b{display:block;font-size:13px}
+.detail li span{color:var(--muted);display:block}
+.detail li.s-stop{border-color:var(--accent)} .detail li.s-late{border-color:var(--warn)} .detail li.s-miss{border-color:var(--bad)}
+.verdict{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:14px;background:var(--bg)}
+.verdict.late{border-left-color:var(--warn)} .verdict.miss{border-left-color:var(--bad)} .verdict.healthy{border-left-color:var(--ok)}
+.verdict b{display:block;margin-bottom:2px}
+.sec{margin-top:28px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cols .card p{margin:0;color:var(--muted);font-size:14px}
+.cols .card h3{margin-bottom:6px}
+dl.map{margin:0;display:grid;gap:10px}
+dl.map div{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
+dl.map dt{font-weight:600;font-size:14px}
+dl.map dd{margin:2px 0 0;color:var(--muted);font-size:13px}
+.impact{max-width:780px}
+.impact p{margin:0 0 10px;color:var(--muted)}
+footer{margin-top:32px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:420px){
+  .hrow,.row{grid-template-columns:minmax(0,1fr) repeat(6,30px);padding-left:8px;padding-right:6px}
+  .g{width:20px;height:20px}
+  .kpi .n{font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<script defer src="/assets/demo-nav.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/portfolio/">Back to portfolio</a>
+  <h1>Salesforce and NetSuite: Quote-to-Cash Reconciliation Demo</h1>
+  <p class="lede">Quote-to-cash rarely fails loudly. A deal closes in Salesforce, a message crosses an integration layer, and weeks later a customer receives the wrong invoice or none at all. Switch controls on and off and watch fourteen fictional deals move from quote to cash, with each failure stopped at the source, caught late or missed.</p>
+  <div class="notice">Fictional data and composite failure classes. Account names, amounts and identifiers are invented. The model is illustrative: it shows how control placement changes where a failure surfaces, and it does not predict any real organization. No measured data is used.</div>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-labelledby="t-c">
+        <h2 id="t-c">Controls</h2>
+        <div class="chips" role="group" aria-label="Scenario">
+          <button class="chip" data-p="none" aria-pressed="true">No controls</button>
+          <button class="chip" data-p="recon" aria-pressed="false">Weekly reconciliation only</button>
+          <button class="chip" data-p="gates" aria-pressed="false">Preventive gates only</button>
+          <button class="chip" data-p="layered" aria-pressed="false">Layered</button>
+        </div>
+        <div id="toggles"></div>
+        <div class="ctl">
+          <label for="rec">Parity reconciliation cadence</label>
+          <small>Compares Salesforce orders with NetSuite sales orders by count and amount. Detective, so it bounds exposure instead of preventing it.</small>
+          <select id="rec">
+            <option value="0">Not running</option>
+            <option value="1">Daily</option>
+            <option value="7">Weekly</option>
+            <option value="30">Monthly</option>
+          </select>
+        </div>
+        <div class="ctl">
+          <label for="dd">Days to find an unchecked failure <output id="o-dd"></output></label>
+          <small>Assumed time until month-end close or a customer inquiry exposes it.</small>
+          <input type="range" id="dd" min="15" max="90" step="5" value="45">
+        </div>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="card" aria-labelledby="t-r">
+        <h2 id="t-r">Fourteen fictional deals, quote to cash</h2>
+        <p class="sum" id="sum" aria-live="polite"></p>
+        <div class="kpis" id="kpis"></div>
+        <div class="board" role="group" aria-label="Deals by stage. Select a deal to see its trace.">
+          <div class="hrow" aria-hidden="true"><span>Deal</span><span title="Quote approved">Qte</span><span title="Order activated">Ord</span><span title="Subscription created">Sub</span><span title="Sales order synced">SO</span><span title="Invoice issued">Inv</span><span title="Cash applied">Cash</span></div>
+          <div id="rows"></div>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="g ok"></i>Healthy</span>
+          <span><i class="g stop">&#10003;</i>Stopped at source</span>
+          <span><i class="g late">!</i>Caught by reconciliation</span>
+          <span><i class="g miss">&times;</i>Found late</span>
+          <span><i class="g blk"></i>Blocked downstream</span>
+        </div>
+        <div class="detail" id="detail" aria-live="polite"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="sec" aria-labelledby="t-a">
+    <h2 id="t-a">Architecture applied</h2>
+    <div class="cols">
+      <div class="card"><h3>1. Preventive gates at the source</h3><p>Validate in Salesforce before anything leaves the system of record: required billing data at order activation, renewal pricing against the prior term and the uplift rule. A rejected record costs a minute to fix in the context of the person who created it.</p></div>
+      <div class="card"><h3>2. An idempotent integration contract</h3><p>Every message between Salesforce, Workato and NetSuite carries a stable key, a contract version and validated reference data. Retries then become safe, and a stale amendment is rejected instead of silently applied.</p></div>
+      <div class="card"><h3>3. Detective parity reconciliation</h3><p>An independent job compares both systems by count and amount and routes exceptions to an owner. It is the net under the gates, and its cadence sets the upper bound on how long any failure can live.</p></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>Which control sees which failure</h2>
+      <dl class="map" id="map"></dl>
+    </div>
+  </section>
+
+  <section class="sec impact" aria-labelledby="t-i">
+    <h2 id="t-i">Impact</h2>
+    <p>Moving a check earlier changes who finds the failure and how expensive the fix is. At the source, the author corrects it immediately. At reconciliation, finance or RevOps investigates it days later. At month-end close, it becomes a credit memo and a conversation with the customer.</p>
+    <p>No single layer is enough. Gates cannot catch what nobody anticipated, and parity checks cannot see an error that both systems agree on, which is why the renewal uplift case needs a preventive rule. Treating the three layers as one design is what turns quote-to-cash from a set of integrations into a reliable revenue system.</p>
+  </section>
+
+  <footer>Salesforce, NetSuite and Workato are trademarks of their respective owners. This page is an independent architecture illustration and is not affiliated with or endorsed by any of them.</footer>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){return document.getElementById(id)};
+  var STAGES=[
+    {n:"Quote approved",sys:"Salesforce CPQ"},
+    {n:"Order activated",sys:"Salesforce"},
+    {n:"Subscription created",sys:"Salesforce"},
+    {n:"Sales order synced",sys:"Workato to NetSuite"},
+    {n:"Invoice issued",sys:"NetSuite"},
+    {n:"Cash applied",sys:"NetSuite"}
+  ];
+  var CTL={
+    gate:{name:"Required-field gate at order activation",d:"Blocks orders missing bill-to or billing start date before they sync."},
+    idem:{name:"Idempotency key on order sync",d:"A retried message cannot create a second sales order."},
+    ver:{name:"Amendment version check",d:"Rejects a change when NetSuite holds a different contract version."},
+    ref:{name:"Reference data validation",d:"Checks subsidiary and currency against the NetSuite map before send."},
+    renew:{name:"Renewal price check",d:"Compares renewal lines with the prior term and the uplift rule."}
+  };
+  var CLS={
+    A:{name:"Duplicate order from a retried sync",stage:3,ctl:"idem",par:true,eff:"A second sales order and invoice reach the customer."},
+    B:{name:"Order activated without billing data",stage:1,ctl:"gate",par:true,eff:"The order never reaches billing."},
+    C:{name:"Amendment not propagated",stage:3,ctl:"ver",par:true,eff:"NetSuite keeps invoicing the old price."},
+    D:{name:"Subsidiary or currency not mapped",stage:3,ctl:"ref",par:true,eff:"NetSuite rejects the sales order and billing stalls."},
+    E:{name:"Renewal uplift not applied",stage:0,ctl:"renew",par:false,eff:"The renewal bills below the contracted uplift."},
+    F:{name:"Partial sync, header without lines",stage:3,ctl:null,par:true,eff:"A sales order exists but has nothing to bill."}
+  };
+  var DEALS=[
+    {a:"Alder Works",t:"New",v:84000,c:null},
+    {a:"Birchline Foods",t:"New",v:120000,c:"B"},
+    {a:"Cobalt Mill",t:"Amendment",v:48000,c:"C"},
+    {a:"Delta Fern",t:"Renewal",v:96000,c:"E"},
+    {a:"Eastgate Optics",t:"New",v:60000,c:null},
+    {a:"Fjord Textiles",t:"New",v:150000,c:"A"},
+    {a:"Granite Peak Labs",t:"Amendment",v:72000,c:null},
+    {a:"Hollow Pine",t:"New",v:36000,c:"D"},
+    {a:"Iris Forge",t:"Renewal",v:180000,c:null},
+    {a:"Juniper Dock",t:"New",v:54000,c:"A"},
+    {a:"Kestrel Mills",t:"Amendment",v:90000,c:"C"},
+    {a:"Lumen Quarry",t:"New",v:108000,c:"F"},
+    {a:"Marsh Lantern",t:"Renewal",v:66000,c:"B"},
+    {a:"Nettle Row",t:"New",v:42000,c:null}
+  ];
+  var PRESETS={
+    none:{on:[],rec:0},
+    recon:{on:[],rec:7},
+    gates:{on:["gate","idem","ver","ref","renew"],rec:0},
+    layered:{on:["gate","idem","ver","ref","renew"],rec:1}
+  };
+  var CAD={0:"not running",1:"daily",7:"weekly",30:"monthly"};
+  var sel=1;
+
+  function money(n){return n>=1000?"$"+Math.round(n/1000)+"K":"$"+Math.round(n)}
+  function state(){
+    var on={}; Object.keys(CTL).forEach(function(k){on[k]=$("c-"+k).checked});
+    return {on:on,rec:+$("rec").value,dd:+$("dd").value};
+  }
+  function outcome(d,s){
+    if(!d.c) return {k:"healthy",delay:0};
+    var c=CLS[d.c];
+    if(c.ctl && s.on[c.ctl]) return {k:"stop",delay:0};
+    if(c.par && s.rec>0) return {k:"late",delay:s.rec};
+    return {k:"miss",delay:s.dd};
+  }
+  function glyph(k){
+    return k==="stop"?'<i class="g stop">&#10003;</i>':k==="late"?'<i class="g late">!</i>':k==="miss"?'<i class="g miss">&times;</i>':'<i class="g ok"></i>';
+  }
+  function cellKind(d,o,i){
+    if(!d.c) return "ok";
+    var bs=CLS[d.c].stage;
+    if(i<bs) return "ok";
+    if(i===bs) return o.k;
+    return o.k==="stop"?"ok":"blk";
+  }
+  function cellHtml(k){return k==="blk"?'<i class="g blk"></i>':glyph(k)}
+  function label(d,o){
+    if(!d.c) return "healthy, no exception";
+    var c=CLS[d.c];
+    return c.name+", "+(o.k==="stop"?"stopped at "+STAGES[c.stage].n:o.k==="late"?"caught by reconciliation after up to "+o.delay+" days":"found late, about "+o.delay+" days");
+  }
+
+  function buildToggles(){
+    $("toggles").innerHTML=Object.keys(CTL).map(function(k){
+      return '<label class="tog"><input type="checkbox" id="c-'+k+'"><span><b>'+CTL[k].name+'</b><small>'+CTL[k].d+'</small></span></label>';
+    }).join("");
+    $("map").innerHTML=Object.keys(CLS).map(function(k){
+      var c=CLS[k], ctl=c.ctl?CTL[c.ctl].name:"No preventive gate in this model";
+      var det=c.par?"Visible to parity reconciliation.":"Invisible to parity reconciliation, because both systems agree on the wrong value.";
+      return '<div><dt>'+c.name+'</dt><dd>Breaks at: '+STAGES[c.stage].n+'. Preventive control: '+ctl+'. '+det+'</dd></div>';
+    }).join("");
+    Object.keys(CTL).forEach(function(k){$("c-"+k).addEventListener("change",function(){clearChips();render()})});
+    $("rec").addEventListener("change",function(){clearChips();render()});
+    $("dd").addEventListener("input",function(){clearChips();render()});
+  }
+  function clearChips(){document.querySelectorAll(".chip").forEach(function(x){x.setAttribute("aria-pressed","false")})}
+  function apply(p){
+    Object.keys(CTL).forEach(function(k){$("c-"+k).checked=p.on.indexOf(k)>=0});
+    $("rec").value=String(p.rec);
+    render();
+  }
+
+  function render(){
+    var s=state();
+    $("o-dd").textContent=s.dd+" days";
+    var n={stop:0,late:0,miss:0}, exp=0, cust=0, total=0;
+    DEALS.forEach(function(d){
+      var o=outcome(d,s);
+      if(d.c){
+        total++; n[o.k]++;
+        if(o.k!=="stop"){
+          exp+=d.v*o.delay/365;
+          if((d.c==="A"||d.c==="C") && o.delay>1) cust++;
+        }
+      }
+    });
+    $("sum").textContent=total+" of 14 deals carry a hidden exception. Stopped at source: "+n.stop+". Caught by reconciliation: "+n.late+". Found late: "+n.miss+". Illustrative revenue exposed: about "+money(exp)+", with "+cust+" customer-facing invoice errors.";
+    $("kpis").innerHTML=
+      '<div class="kpi ok"><div class="n">'+n.stop+'</div><div class="l">Stopped at source</div></div>'+
+      '<div class="kpi warn"><div class="n">'+n.late+'</div><div class="l">Caught by reconciliation</div></div>'+
+      '<div class="kpi bad"><div class="n">'+n.miss+'</div><div class="l">Found late</div></div>'+
+      '<div class="kpi"><div class="n">'+money(exp)+'</div><div class="l">Revenue exposed, illustrative</div></div>'+
+      '<div class="kpi '+(cust?"bad":"ok")+'"><div class="n">'+cust+'</div><div class="l">Customer-facing errors</div></div>';
+    $("rows").innerHTML=DEALS.map(function(d,idx){
+      var o=outcome(d,s), cells="";
+      for(var i=0;i<6;i++) cells+='<span class="cell">'+cellHtml(cellKind(d,o,i))+'</span>';
+      return '<button type="button" class="row" data-i="'+idx+'" aria-pressed="'+(idx===sel)+'" aria-label="'+d.a+", "+d.t+", "+money(d.v)+" ACV, "+label(d,o)+'"><span class="who"><b>'+d.a+'</b><small>'+d.t+' &middot; '+money(d.v)+' ACV</small></span>'+cells+'</button>';
+    }).join("");
+    document.querySelectorAll(".row").forEach(function(b){
+      b.addEventListener("click",function(){sel=+b.dataset.i;render();var nb=document.querySelector('.row[data-i="'+sel+'"]');if(nb)nb.focus()});
+    });
+    renderDetail(s);
+  }
+
+  function renderDetail(s){
+    var d=DEALS[sel], o=outcome(d,s), c=d.c?CLS[d.c]:null;
+    var ids=["Quote Q-"+(2000+sel),"Order O-"+(3000+sel),"Subscription S-"+(4000+sel),"Sales order SO-"+(5000+sel),"Invoice INV-"+(6000+sel),"Payment P-"+(7000+sel)];
+    var li="";
+    for(var i=0;i<6;i++){
+      var k=cellKind(d,o,i), cls=k==="stop"?"s-stop":k==="late"?"s-late":k==="miss"?"s-miss":"";
+      var st=k==="ok"?"Completed":k==="stop"?"Stopped and corrected at source":k==="late"?"Failed, found by reconciliation":k==="miss"?"Failed, no check saw it":"Blocked by the upstream failure";
+      li+='<li class="'+cls+'"><b>'+STAGES[i].n+'</b><span>'+STAGES[i].sys+'</span><span>'+ids[i]+'</span><span>'+st+'</span></li>';
+    }
+    var v;
+    if(!c){
+      v='<div class="verdict healthy"><b>No exception</b>This deal flows through every stage cleanly. Healthy deals matter because controls must stay quiet on them, or teams learn to ignore the alerts.</div>';
+    }else if(o.k==="stop"){
+      v='<div class="verdict"><b>'+c.name+': stopped at source</b>The control "'+CTL[c.ctl].name+'" rejected the problem at '+STAGES[c.stage].n.toLowerCase()+', so nothing downstream needed repair. Without it, this class would have meant: '+c.eff.toLowerCase()+'</div>';
+    }else if(o.k==="late"){
+      v='<div class="verdict late"><b>'+c.name+': caught by reconciliation</b>It broke at '+STAGES[c.stage].n.toLowerCase()+' and the '+CAD[s.rec]+' parity run flagged it up to '+o.delay+' day'+(o.delay>1?"s":"")+' later. Effect until then: '+c.eff.toLowerCase()+(o.delay>1&&(d.c==="A"||d.c==="C")?" With this cadence, the invoice reached the customer before the check ran.":"")+'</div>';
+    }else{
+      v='<div class="verdict miss"><b>'+c.name+': found late</b>It broke at '+STAGES[c.stage].n.toLowerCase()+'. '+(c.par?"No parity check is running, so it":"Parity checks compare Salesforce with NetSuite, and both hold the same wrong value, so reconciliation cannot see it. It")+' surfaced about '+o.delay+' days later, through month-end close or a customer inquiry. Effect: '+c.eff.toLowerCase()+'</div>';
+    }
+    $("detail").innerHTML='<h3>'+d.a+' &middot; '+d.t+' &middot; '+money(d.v)+' ACV</h3><ol>'+li+'</ol>'+v;
+  }
+
+  buildToggles();
+  document.querySelectorAll(".chip").forEach(function(b){
+    b.addEventListener("click",function(){clearChips();b.setAttribute("aria-pressed","true");apply(PRESETS[b.dataset.p])});
+  });
+  apply(PRESETS.none);
+})();
+</script>
+</body>
+</html>

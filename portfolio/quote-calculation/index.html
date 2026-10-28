@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keeping quote calculation fast at quarter end | Andres Videla</title>
+<meta name="description" content="A composite case on why CPQ calculation degrades under peak load, and the design changes that keep it stable.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Keeping quote calculation fast at quarter end">
+<meta property="og:url" content="https://andres-videla.com/portfolio/quote-calculation/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="A composite case on why CPQ calculation degrades under peak load, and the design changes that keep it stable.">
+<meta property="og:image" content="https://andres-videla.com/assets/og-quote-calculation.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="name" href="/">Andres Videla</a>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a href="/portfolio/" aria-current="page">Portfolio</a></li>
+        <li><a href="/#practice">Practice</a></li>
+        <li><a href="/#notes">Field notes</a></li>
+        <li><a href="/#cases">Cases</a></li>
+        <li><a href="/#stack">Stack</a></li>
+        <li><a href="/#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="page post">
+  <p class="crumb"><a href="/">Home</a> <span>/</span> <a href="/portfolio/">Portfolio</a></p>
+  <h1>Keeping quote calculation fast at quarter end</h1>
+  <p class="dek">Why CPQ calculation degrades under peak load, and the design changes that keep it stable.</p>
+  <p class="meta">Composite case. October 2026.</p>
+
+  <figure class="map">
+    <svg viewBox="0 0 640 190" role="img" aria-labelledby="ch-t ch-d">
+          <title id="ch-t">Calculation time versus quote size, illustrative</title>
+          <desc id="ch-d">Calculation time grows faster than quote size, and quarter-end load adds contention and retries on top.</desc>
+          <rect x="470" y="18" width="150" height="132" fill="var(--warn)" opacity=".09"/>
+          <text class="c-zone" x="478" y="141">Quarter-end load</text>
+          <line class="c-axis" x1="48" y1="150" x2="620" y2="150"/>
+          <line class="c-axis" x1="48" y1="18" x2="48" y2="150"/>
+          <path class="curve" pathLength="1" d="M48,146 C200,144 330,132 420,98 S560,30 612,18"/>
+          <circle class="c-dot" cx="345" cy="120" r="3.5"/>
+          <line class="c-tick" x1="312" y1="98" x2="342" y2="117"/>
+          <text class="c-note" x="308" y="96" text-anchor="end">Rules and lookups multiply per line</text>
+          <circle class="c-dot" cx="530" cy="50" r="3.5"/>
+          <line class="c-tick" x1="533" y1="54" x2="560" y2="92"/>
+          <text class="c-note" x="618" y="108" text-anchor="end">Retries add load</text>
+          <text class="c-label" x="334" y="176" text-anchor="middle">Quote size: lines, bundle depth, rules</text>
+          <text class="c-label" transform="translate(16,84) rotate(-90)" text-anchor="middle">Calculation time</text>
+        </svg>
+    <figcaption>Illustrative shape of the problem, not measured data.</figcaption>
+  </figure>
+
+  <h2>The pattern</h2>
+  <p>A quoting system that feels fine for eleven weeks of the quarter becomes slow in the twelfth. Reps edit the same large quotes many times, deal desk reprices in parallel, and finance waits for approvals. Calculation takes longer, users click again, and the system receives more work exactly when it has the least capacity to give.</p>
+  <p>Nothing is broken in the ordinary sense. Each piece works in isolation. The failure comes from how the pieces interact under concurrency.</p>
+
+  <h2>Why it gets worse faster than the load grows</h2>
+  <p>Three effects compound.</p>
+  <ul>
+    <li><strong>Calculation cost multiplies.</strong> Time grows with lines, bundle depth, price rules and lookups, and these multiply per line instead of adding up. A quote that is twice as large can cost far more than twice as much to calculate.</li>
+    <li><strong>Shared parents create contention.</strong> Many lines and many users update the same quote, opportunity or account. Roll-ups, triggers and flows that write to a shared parent turn parallel work into queued work, and eventually into record lock errors.</li>
+    <li><strong>Retries amplify load.</strong> A user who sees a spinner or a lock error tries again. Each retry starts a new calculation while the old one may still be running.</li>
+  </ul>
+
+  <h2>Design moves, in the order I apply them</h2>
+
+  <h3>1. Measure the calculation path before changing it</h3>
+  <p>Find out which price rules, lookups and custom calculator code run for each line, and how often. Most of the time is spent in a small number of places. Optimizing without this map usually moves cost around instead of removing it.</p>
+
+  <h3>2. Remove redundant evaluation</h3>
+  <p>Overlapping price rules, repeated lookups for the same value and conditions that are always true are common after years of incremental changes. Consolidate rules, cache values used by many lines, and move static data into the product model so it is configured once instead of computed every time.</p>
+
+  <h3>3. Move non-blocking work out of the user's wait</h3>
+  <p>The user needs a price. They do not need enrichment, notifications or downstream updates to finish before the screen responds. Run those through asynchronous jobs or events, and make them idempotent so that a retry cannot duplicate work.</p>
+
+  <h3>4. Make the code bulk-safe and lock-aware</h3>
+  <ul>
+    <li>Aggregate changes and write to each shared parent once per transaction, not once per line.</li>
+    <li>Process records in a consistent order, so two transactions do not wait on each other in opposite directions.</li>
+    <li>Handle lock errors with a bounded retry and backoff, and log every occurrence so that frequency becomes visible.</li>
+  </ul>
+
+  <h3>5. Bound the problem size</h3>
+  <p>Set a practical ceiling for lines per quote and split oversized bundles. A limit that the product model enforces is cheaper than a performance fix that has to keep chasing growth.</p>
+
+  <h3>6. Test with the profile that hurts</h3>
+  <p>Replay a realistic quarter-end pattern: the biggest quotes, many users editing at once, approvals running in parallel. Run it before each release. Average-day tests will not show the failure.</p>
+
+  <h2>What stable looks like</h2>
+  <p>Quote editing stays responsive at peak. Lock errors still happen occasionally, but they are rare, retried safely and visible in monitoring. The team has a repeatable performance test that runs before changes ship, so a regression is found in a test environment and not in the last week of the quarter.</p>
+
+  <h2>The failure to watch for afterwards</h2>
+  <p>Moving work to asynchronous jobs removes pressure from the user's screen, and it also creates a new way to fail silently. If a job stops running, nobody sees an error. Monitor for the absence of expected outcomes, and alert on silence.</p>
+
+  <p class="note">This is a composite case. It generalizes a pattern that recurs across organizations and does not describe any single company or engagement.</p>
+
+  <p class="more"><a href="/portfolio/">Back to portfolio</a></p>
+  <p class="totop"><a href="/">Back to home</a></p>
+</main>
+
+<footer class="base">
+  <div class="wrap">
+    <p>&copy; 2026 Andres Videla.</p>
+    <p>Views expressed here are my own and do not represent any employer or client. Salesforce and other product names are trademarks of their respective owners.</p>
+  </div>
+</footer>
+</body>
+</html>

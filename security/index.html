@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Security and data handling | Andres Videla</title>
+<meta name="description" content="How this site and its interactive demos handle data, what is measured, and how to report a security concern.">
+<meta name="author" content="Andres Videla">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Security and data handling">
+<meta property="og:url" content="https://andres-videla.com/security/">
+<meta property="og:site_name" content="Andres Videla">
+<meta property="og:description" content="How this site and its interactive demos handle data, what is measured, and how to report a security concern.">
+<meta name="twitter:card" content="summary">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+<link rel="canonical" href="https://andres-videla.com/security/">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="name" href="/">Andres Videla</a>
+    <nav aria-label="Primary">
+      <ul>
+        <li><a href="/portfolio/">Portfolio</a></li>
+        <li><a href="/#practice">Practice</a></li>
+        <li><a href="/#notes">Field notes</a></li>
+        <li><a href="/#cases">Cases</a></li>
+        <li><a href="/#stack">Stack</a></li>
+        <li><a href="/#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="page post">
+  <p class="crumb"><a href="/">Home</a></p>
+  <h1>Security and data handling</h1>
+  <p class="dek">How this site and its interactive demos handle data, and how to report a security concern.</p>
+  <p class="meta">Last updated October 29, 2026.</p>
+
+  <h2>How this site is built</h2>
+  <p>This is a static site. It is made of HTML, CSS and JavaScript files served over HTTPS from GitHub Pages. It has no user accounts, no forms, no database and no server-side code.</p>
+
+  <h2>What stays in your browser</h2>
+  <p>The site sets no cookies of its own. The portfolio catalog remembers, for the current tab only, which card you opened last, so that it can reopen on that card when you come back. It does this by keeping that page address in your browser's session storage. The value never leaves your browser and disappears when you close the tab.</p>
+
+  <h2>What is measured</h2>
+  <p>Aggregate traffic is measured with Cloudflare Web Analytics: page views, visits, browser, operating system, country and page load performance. According to Cloudflare, this service does not use cookies or local storage to track individual visitors. The site does not ask visitors for personal data.</p>
+
+  <h2>The interactive demos</h2>
+  <p>The demos run entirely in your browser and use fictional data only. They do not send data to any server, and they use no forms and no browser storage.</p>
+
+  <h2>Client and employer information</h2>
+  <p>No client or employer data appears on this site. Case studies are composite and generalized, and demos use invented records.</p>
+
+  <h2>Reporting a security concern</h2>
+  <p>If you find a problem with this site, write to <a href="mailto:info@andres-videla.com">info@andres-videla.com</a>.</p>
+
+  <p class="totop"><a href="/">Back to home</a></p>
+</main>
+
+<footer class="base">
+  <div class="wrap">
+    <p>&copy; 2026 Andres Videla.</p>
+    <p>Views expressed here are my own and do not represent any employer or client. Salesforce and other product names are trademarks of their respective owners.</p>
+    <p><a href="/security/">Security and data handling</a></p>
+  </div>
+</footer>
+<!-- Cloudflare Web Analytics -->
+<script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "bad0e77df0344ae1bda2b833925fef16"}'></script>
+<!-- End Cloudflare Web Analytics -->
+</body>
+</html>
